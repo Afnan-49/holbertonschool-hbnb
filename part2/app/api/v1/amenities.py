@@ -1,4 +1,5 @@
 from flask_restx import Namespace, Resource, fields
+from flask import current_app
 
 api = Namespace("amenities", description="Amenity operations")
 

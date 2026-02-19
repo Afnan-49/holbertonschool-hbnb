@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_restx import Api
+from app.services.facade import HBnBFacade
 
 # Import Namespaces
 from app.api.v1.users import api as users_ns
@@ -16,8 +17,9 @@ def create_app():
         version="1.0",
         title="HBnB API",
         description="HBnB Application API",
-        doc="/"   # Swagger يفتح على الصفحة الرئيسية
+        doc="/"  
     )
+    app.config["FACADE"] = HBnBFacade()
 
     # Register Namespaces
     api.add_namespace(users_ns, path="/users")
