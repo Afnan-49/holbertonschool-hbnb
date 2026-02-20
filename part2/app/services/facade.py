@@ -35,7 +35,6 @@ class HBnBFacade:
         if not user:
             return None
 
-        # حسب المطلوب: Update للمعلومات فقط (بدون تغيير email/password)
         if "first_name" in user_data:
             user.first_name = (user_data.get("first_name") or "").strip()
         if "last_name" in user_data:
@@ -44,5 +43,36 @@ class HBnBFacade:
         user.validate()
         user.save()
         return user
+    
+    from app.models.amenity import Amenity
+
+# ---------- Amenities ----------
+def create_amenity(self, data: dict) -> Amenity:
+    name = (data.get("name") or "").strip()
+    amenity = Amenity(name=name)
+    amenity.validate()
+
+    if self.amenity_repo.get_by_attribute("name", amenity.name):
+        raise ValueError("Amenity name already exists")
+
+    return self.amenity_repo.add(amenity)
+
+def get_amenity(self, amenity_id: str):
+    return self.amenity_repo.get(amenity_id)
+
+def list_amenities(self):
+    return self.amenity_repo.get_all()
+
+def update_amenity(self, amenity_id: str, data: dict):
+    amenity = self.amenity_repo.get(amenity_id)
+    if not amenity:
+        return None
+
+    if "name" in data:
+        amenity.update({"name": (data.get("name") or "").strip()})
+
+    amenity.validate()
+    return amenity
+
 
 facade = HBnBFacade()
