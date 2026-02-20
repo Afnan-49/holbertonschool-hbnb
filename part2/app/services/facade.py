@@ -154,6 +154,81 @@ def update_place(self, place_id: str, data: dict):
         place.save()  
     place.validate()
     return place
+from app.models.review import Review
+
+# ---------- Reviews ----------
+def create_review(self, data: dict) -> Review:
+    text = (data.get("text") or "").strip()
+    rating = data.get("rating")
+    user_id = data.get("user_id")
+    place_id = data.get("place_id")
+
+    user = self.user_repo.get(user_id)
+    if not user:
+        raise ValueError("User not found")
+
+    place = self.place_repo.get(place_id)
+    if not place:
+        raise ValueError("Place not found")
+
+    review = Review(text=text, rating=rating, user=user, place=place)
+    review.validate()
+
+    created = self.review_repo.add(review)
+
+    # keep relationship on place (for showing reviews in place output)
+    if not hasattr(place, "reviews") or place.reviews is None:
+        place.reviews = []
+    place.reviews.append(created)
+    place.save()
+
+    return created
+
+def get_review(self, review_id: str):
+    return self.review_repo.get(review_id)
+
+def list_reviews(self):
+    return self.review_repo.get_all()
+
+def update_review(self, review_id: str, data: dict):
+    review = self.review_repo.get(review_id)
+    if not review:
+        return None
+
+    patch = {}
+    if "text" in data:
+        patch["text"] = (data.get("text") or "").strip()
+    if "rating" in data:
+        patch["rating"] = data.get("rating")
+
+    review.update(patch)
+    review.validate()
+    return review
+
+def delete_review(self, review_id: str) -> bool:
+    review = self.review_repo.get(review_id)
+    if not review:
+        return False
+
+    # remove from place.reviews if present
+    place = review.place
+    if place and hasattr(place, "reviews") and place.reviews:
+        place.reviews = [r for r in place.reviews if r.id != review_id]
+        place.save()
+
+    return self.review_repo.delete(review_id) or True  # depending on your delete return
+
+def list_reviews_by_place(self, place_id: str):
+    place = self.place_repo.get(place_id)
+    if not place:
+        raise ValueError("Place not found")
+
+    # If we store reviews on place:
+    if hasattr(place, "reviews") and place.reviews is not None:
+        return place.reviews
+
+
+    return [r for r in self.review_repo.get_all() if r.place and r.place.id == place_id]
 
 
 facade = HBnBFacade()

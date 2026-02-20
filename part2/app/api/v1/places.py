@@ -15,6 +15,12 @@ place_input = api.model("PlaceInput", {
     "amenity_ids": fields.List(fields.String, required=False, description="List of amenity IDs"),
 })
 
+review_in_place = api.model("ReviewInPlace", {
+    "id": fields.String,
+    "text": fields.String,
+    "rating": fields.Integer,
+    "user_id": fields.String,
+})
 place_output = api.model("Place", {
     "id": fields.String(readOnly=True),
     "title": fields.String,
@@ -39,6 +45,8 @@ place_output = api.model("Place", {
 
     "created_at": fields.String,
     "updated_at": fields.String,
+
+    "reviews": fields.List(fields.Nested(review_in_place)),
 })
 
 def serialize_place(p):
@@ -59,6 +67,16 @@ def serialize_place(p):
         "amenities": [{"id": a.id, "name": a.name} for a in (p.amenities or [])],
         "created_at": p.created_at.isoformat(),
         "updated_at": p.updated_at.isoformat(),
+
+        "reviews": [
+    {
+        "id": r.id,
+        "text": r.text,
+        "rating": r.rating,
+        "user_id": r.user.id if r.user else None,
+    }
+    for r in (getattr(p, "reviews", []) or [])
+],
     }
 
 @api.route("/")
