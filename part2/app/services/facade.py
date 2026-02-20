@@ -73,6 +73,87 @@ def update_amenity(self, amenity_id: str, data: dict):
 
     amenity.validate()
     return amenity
+from app.models.place import Place
+
+# ---------- Places ----------
+def create_place(self, data: dict) -> Place:
+    title = (data.get("title") or "").strip()
+    description = (data.get("description") or "")
+    price = data.get("price")
+    latitude = data.get("latitude")
+    longitude = data.get("longitude")
+    owner_id = data.get("owner_id")
+    amenity_ids = data.get("amenity_ids") or []
+
+    owner = self.user_repo.get(owner_id)
+    if not owner:
+        raise ValueError("Owner not found")
+
+    amenities = []
+    for aid in amenity_ids:
+        a = self.amenity_repo.get(aid)
+        if not a:
+            raise ValueError(f"Amenity not found: {aid}")
+        amenities.append(a)
+
+    place = Place(
+        title=title,
+        description=description,
+        price=price,
+        latitude=latitude,
+        longitude=longitude,
+        owner=owner,
+        amenities=amenities,
+    )
+    place.validate()
+    return self.place_repo.add(place)
+
+def get_place(self, place_id: str):
+    return self.place_repo.get(place_id)
+
+def list_places(self):
+    return self.place_repo.get_all()
+
+def update_place(self, place_id: str, data: dict):
+    place = self.place_repo.get(place_id)
+    if not place:
+        return None
+
+    # allowed updates
+    patch = {}
+    if "title" in data:
+        patch["title"] = (data.get("title") or "").strip()
+    if "description" in data:
+        patch["description"] = data.get("description") or ""
+    if "price" in data:
+        patch["price"] = data.get("price")
+    if "latitude" in data:
+        patch["latitude"] = data.get("latitude")
+    if "longitude" in data:
+        patch["longitude"] = data.get("longitude")
+
+    # owner update (optional)
+    if "owner_id" in data:
+        new_owner = self.user_repo.get(data.get("owner_id"))
+        if not new_owner:
+            raise ValueError("Owner not found")
+        patch["owner"] = new_owner
+
+    place.update(patch)
+
+    # amenities update (optional)
+    if "amenity_ids" in data:
+        amenity_ids = data.get("amenity_ids") or []
+        new_amenities = []
+        for aid in amenity_ids:
+            a = self.amenity_repo.get(aid)
+            if not a:
+                raise ValueError(f"Amenity not found: {aid}")
+            new_amenities.append(a)
+        place.amenities = new_amenities
+        place.save()  
+    place.validate()
+    return place
 
 
 facade = HBnBFacade()
