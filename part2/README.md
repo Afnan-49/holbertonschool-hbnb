@@ -86,8 +86,8 @@ PUT,/users/<id>,Update user info
 | **GET** | `/reviews/places/<id>/reviews` | Get all reviews for a specific place |                                           ---
 ### 🧪 Running Tests
 
-## 🎯 Objective
-> The primary goal of this phase is to ensure the **reliability and integrity** of the HBnB API.
+## 🎯 Objective:
+The primary goal of this phase is to ensure the **reliability and integrity** of the HBnB API.
 
 This involves:
 * **Verifying business logic:** Ensuring data is handled according to specified rules.
@@ -120,42 +120,131 @@ python3 tests/test_models_basic.py
 ```
 ---
 
-### 🛠️ Manual Testing with cURL
+### 🚀 API Manual Testing using cURL
+This section documents the manual testing performed on all API endpoints, covering both positive (Success) and negative (Failure) scenarios to ensure robust validation and error handling.
+---
 
-You can test the API directly using `curl`. Run the following command in your terminal to register a new user:
+---
 
-## Register a User
-(✅ Successful Case):
-
+1- User Operations (/users/)
+### ✅ Success: Create a New User
 ```
-curl -X POST "[http://127.0.0.1:5000/users/](http://127.0.0.1:5000/users/)" \
+curl -X POST "http://127.0.0.1:5000/users/" \
      -H "Content-Type: application/json" \
-     -d '{
-          "first_name": "John",
-          "last_name": "Doe",
-          "email": "john.doe@example.com",
-          "password": "securepassword"
-         }'
+     -d '{"first_name": "Alice", "last_name": "Smith", "email": "alice@example.com", "password": "secure123"}'
 ```
-- Expected Response: 201 Created with the JSON object containing the generated id.
----
----
-## (❌ Failed Case: Invalid Data)
+- Expected Response: 201 Created with the full user object (id, created_at, etc.).
+
+### ❌ Failure: Duplicate Email
+```
+curl -X POST "http://127.0.0.1:5000/users/" \
+     -H "Content-Type: application/json" \
+     -d '{"first_name": "Alice", "last_name": "Smith", "email": "alice@example.com", "password": "secure123"}'
+```
+- Expected Response: 400 Bad Request | {"message": "Email already exists"}.
+
+### ❌ Failure: Invalid Email Format
+```
+curl -X POST "http://127.0.0.1:5000/users/" \
+     -H "Content-Type: application/json" \
+     -d '{"first_name": "Alice", "last_name": "Smith", "email": "not-an-email"}'
+```
+-Expected Response: 400 Bad Request | {"message": "email must be a valid email address"}.
+___
+
+2- Amenity Operations (/amenities/)
+### ✅ Success: Create an Amenity
+```
+curl -X POST "http://127.0.0.1:5000/amenities/" \
+     -H "Content-Type: application/json" \
+     -d '{"name": "Swimming Pool"}'
+```
+- Expected Response: 201 Created.
+
+### ❌ Failure: Empty Amenity Name
+```
+curl -X POST "http://127.0.0.1:5000/amenities/" \
+     -H "Content-Type: application/json" \
+     -d '{"name": ""}'
+```
+- Expected Response: 400 Bad Request | {"message": "name is required"}.
+___
+
+3- Place Operations (/places/)
+### ✅ Success: Create a Place (Linked with Owner and Amenities)
 ```
 curl -X POST "http://127.0.0.1:5000/places/" \
      -H "Content-Type: application/json" \
      -d '{
-         "title": "Desert Retreat",
-         "price": -50.0,
-         "latitude": 120.0,
-         "longitude": -122.4,
-         "owner_id": "valid-id-here"
+         "title": "Luxury Villa",
+         "description": "Ocean view",
+         "price": 250.0,
+         "latitude": 34.05,
+         "longitude": -118.24,
+         "owner_id": "PASTE_USER_ID_HERE",
+         "amenity_ids": ["PASTE_AMENITY_ID_HERE"]
      }'
 ```
-- Expected Response: 400 Bad Request.
-- Reason: Price is negative and Latitude is out of bounds ($120.0 > 90.0$).
+- Expected Response: 201 Created.
+
+### ❌ Failure: Invalid Latitude
+```
+curl -X POST "http://127.0.0.1:5000/places/" \
+     -H "Content-Type: application/json" \
+     -d '{"title": "Mars Base", "price": 100, "latitude": 150.0, "longitude": 0, "owner_id": "USER_ID"}'
+```
+- Expected Response: 400 Bad Request | {"message": "latitude must be between -90.0 and 90.0"}.
+
+### ❌ Failure: Non-Existent Owner
+```
+curl -X POST "http://127.0.0.1:5000/places/" \
+     -H "Content-Type: application/json" \
+     -d '{"title": "Ghost House", "price": 10, "latitude": 0, "longitude": 0, "owner_id": "fake-id"}'
+```
+- Expected Response: 400 Bad Request | {"message": "Owner not found"}.
+___
+
+4- Review Operations (/reviews/)
+### ✅ Success: Create a Review
+```
+curl -X POST "http://127.0.0.1:5000/reviews/" \
+     -H "Content-Type: application/json" \
+     -d '{
+         "text": "Amazing experience!",
+         "rating": 5,
+         "user_id": "USER_ID",
+         "place_id": "PLACE_ID"
+     }'
+```
+- Expected Response: 201 Created.
+
+### ❌ Failure: Rating Out of Range (e.g., 6)
+```
+curl -X POST "http://127.0.0.1:5000/reviews/" \
+     -H "Content-Type: application/json" \
+     -d '{"text": "Bad", "rating": 6, "user_id": "USER_ID", "place_id": "PLACE_ID"}'
+```
+- Expected Response: 400 Bad Request | {"message": "rating must be between 1 and 5"}.
+
+### ✅ Success: Delete a Review
+```
+curl -X DELETE "http://127.0.0.1:5000/reviews/REVIEW_ID"
+```
+- Expected Response: 200 OK | {"message": "Review deleted"}.
+___
+
+5- Fetching Data (GET Operations)
+### 🔍 API Verification Examples
+
+| Operation | Command | Expected Result |
+| :--- | :--- | :--- |
+| **List All Places** | `curl http://127.0.0.1:5000/places/` | `200 OK` List of all places. |
+| **Get Place Details** | `curl http://127.0.0.1:5000/places/<ID>` | `200 OK` Detailed object with owner/amenities. |
+| **Get Non-existent User** | `curl http://127.0.0.1:5000/users/999` | `404 Not Found`. |
+| **List Place Reviews** | `curl http://127.0.0.1:5000/reviews/places/<ID>/reviews` | `200 OK` List of reviews for that place. |
+
 ---
-🚦 Installation and Setup
+## 🚦 Installation and Setup
 1. Clone the Repository:
 ```
 git clone <repository_url>
