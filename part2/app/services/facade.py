@@ -191,17 +191,29 @@ class HBnBFacade:
         if not place:
             raise ValueError("Place not found")
 
-        review = Review(text=text, rating=rating, user=user, place=place)
+        # ✅ أنشئ Review باستخدام IDs (بدل objects)
+        review = Review(
+            text=text,
+            rating=rating,
+            user_id=user.id,
+            place_id=place.id,
+        )
+
+        # (اختياري) حقن مراجع objects إذا تحتاجينها للعرض فقط
+        review.user = user
+        review.place = place
+
         review.validate()
         created = self.review_repo.add(review)
 
-        if not hasattr(place, "reviews") or place.reviews is None:
-            place.reviews = []
-        place.reviews.append(created)
+        # ✅ اربطي الـ review بالـ place عن طريق IDs بدل objects
+        if not hasattr(place, "review_ids") or place.review_ids is None:
+            place.review_ids = []
+        place.review_ids.append(created.id)
         place.save()
 
         return created
-
+    
     def get_review(self, review_id: str) -> Optional[Review]:
         return self.review_repo.get(review_id)
 
@@ -224,19 +236,7 @@ class HBnBFacade:
         review.save()
         return review
 
-    def delete_review(self, review_id: str) -> bool:
-        review = self.review_repo.get(review_id)
-        if not review:
-            return False
-
-        place = review.place
-        if place and hasattr(place, "reviews") and place.reviews:
-            place.reviews = [r for r in place.reviews if r.id != review_id]
-            place.save()
-
-        self.review_repo.delete(review_id)
-        return True
-
+    
     def list_reviews_by_place(self, place_id: str) -> List[Review]:
         place = self.place_repo.get(place_id)
         if not place:
@@ -247,5 +247,22 @@ class HBnBFacade:
 
         return [r for r in self.review_repo.get_all() if r.place and r.place.id == place_id]
 
+    def delete_review(self, review_id: str) -> bool:
+        review = self.review_repo.get(review_id)
+        if not review:
+            return False
 
+        # نحذف الربط من place.review_ids
+        place_id = getattr(review, "place_id", None)
+        if place_id:
+            place = self.place_repo.get(place_id)
+            if place and hasattr(place, "review_ids") and place.review_ids:
+                place.review_ids = [
+                    rid for rid in place.review_ids if rid != review_id
+                ]
+                place.save()
+
+        # نحذف من الريبو
+        self.review_repo.delete(review_id)
+        return True
 facade = HBnBFacade()
