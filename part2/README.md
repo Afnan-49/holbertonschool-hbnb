@@ -1,7 +1,7 @@
 # HBnB Evolution: Part 2 — Business Logic & API Layer
 ## Table of Contents
 
-1. [Introduction](#-introduction)
+1. [Introduction](#introduction)
 2. [Architecture & Design Patterns](#-architecture--design-patterns)
 3. [Technical Implementation Details](#-technical-implementation-details)
     * [The Business Logic Layer (Models)](#1-the-business-logic-layer-models)
