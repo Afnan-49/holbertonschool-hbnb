@@ -2,28 +2,28 @@
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [Architecture & Design Patterns](#architecture--design-patterns)
-3. [Technical Implementation Details](#technical-implementation-details)
-    * [The Business Logic Layer (Models)](#1the-business-logic-layer-models)
-    * [The Persistence Layer (Repository)](#2the-persistence-layer-repository)
-    * [The Service Layer (Facade)](#3the-service-layer-facade)
-    * [The Presentation Layer (API)](#4the-presentation-layer-api)
-4. [API Endpoints Reference](#api-endpoints-reference)
+2. [Architecture & Design Patterns](#arch-design)
+3. [Technical Implementation Details](#tech-details)
+    * [The Business Logic Layer (Models)](#logic-models)
+    * [The Persistence Layer (Repository)](#persistence-repo)
+    * [The Service Layer (Facade)](#service-facade)
+    * [The Presentation Layer (API)](#presentation-api)
+4. [API Endpoints Reference](#api-reference)
 5. [Running Tests](#running-tests)
-    * [Business Logic Validation](#business-logic-validation)
-    * [API Manual Testing using cURL](#api-manual-testing-using-curl)
-6. [Installation and Setup](#installation-and-setup)
-7. [Automated Unit Testing](#automated-unit-testing)
-8. [Detailed Testing Report Summary](#detailed-testing-report-summary)
+    * [Business Logic Validation](#logic-validation)
+    * [API Manual Testing using cURL](#curl-testing)
+6. [Installation and Setup](#setup)
+7. [Automated Unit Testing](#unit-testing)
+8. [Detailed Testing Report Summary](#test-report)
 9. [Authors](#authors)
 -----------------------------------
 
-## Introduction
+## Introduction <a name="introduction"></a>
 HBnB Evolution is a modular vacation rental management system. In this second phase of development, we have implemented the core Business Logic and the RESTful API. This implementation emphasizes a clean separation of concerns, ensuring that each component—from user management to place reviews—is decoupled and independently testable.
 
 -----------------------------------
 
-## Architecture & Design Patterns
+## Architecture & Design Patterns <a name="arch-design"></a>
 The project follows a 3-Tier Architecture (Presentation, Business Logic, and Persistence) connected via the Facade Pattern.
 
 ## Key Patterns Used:
@@ -32,7 +32,7 @@ The project follows a 3-Tier Architecture (Presentation, Business Logic, and Per
 - Singleton Pattern: The facade is instantiated once and shared across the application to maintain a consistent state.
 - Data Transfer Objects (DTOs): We use serialize_... methods in the API layer to format model data into JSON, ensuring internal logic doesn't leak to the client.
 --------------------------------------------
-## Technical Implementation Details
+## Technical Implementation Details <a name="tech-details"></a>
 1. The Business Logic Layer (Models)
 All entities (User, Place, Review, Amenity) inherit from a BaseModel that provides:
 - A unique uuid4 identifier.
@@ -45,25 +45,25 @@ Data integrity is enforced at the model level using custom validator functions. 
 - Places: Price must be positive; Latitude (-90 to 90) and Longitude (-180 to 180) must be within geo-spatial bounds.
 - Reviews: Ratings must be between 1 and 5.
 
-2. The Persistence Layer (Repository):
+2. The Persistence Layer (Repository): <a name="persistence-repo"></a>
 
 We implemented a generic Repository Abstract Base Class (ABC) to define the interface for data operations (add, get, get_all, update, delete). The InMemoryRepository currently manages these objects in a dictionary, providing fast access for development.
 
-3. The Service Layer (Facade):
+3. The Service Layer (Facade): <a name="service-facade"></a>
 The HBnBFacade handles the "heavy lifting" of the application
 
 - User Management: Ensures email uniqueness before adding a user.
 - Place Management: Validates that an owner_id exists and that all provided amenity_ids are valid before creating a place.
 - Review Management: Automatically updates the Place model's review collection when a new review is created.
 
-4. The Presentation Layer (API):
+4. The Presentation Layer (API): <a name="presentation-api"></a>
 Built with Flask-RESTx, the API is organized into Namespaces
 
 - Documentation: Automatic Swagger UI generation (accessible at /).
 - Error Handling: Uses api.abort() to return clear, standard HTTP error codes (400 for bad data, 404 for missing resources).
 ---
 
-## API Endpoints Reference
+## API Endpoints Reference <a name="api-reference"></a>
 
 ### **Users**
 
@@ -106,7 +106,7 @@ Built with Flask-RESTx, the API is organized into Namespaces
 | **GET** | `/reviews/places/<id>/reviews` | Get all reviews for a specific place |                                           ---
 ---
 
-## Running Tests
+## Running Tests <a name="running-tests"></a>
 
 ### Objective:
 The primary goal of this phase is to ensure the **reliability and integrity** of the HBnB API.
@@ -118,7 +118,7 @@ This involves:
 
 ---
 
-## 1. Business Logic Validation
+## 1. Business Logic Validation <a name="logic-validation"></a>
 Before exposing endpoints, we implemented **strict validation checks** within the **Model Layer** to prevent "garbage data" from entering the system.
 
 | Entity | Attribute | Validation Rule |
@@ -142,7 +142,7 @@ python3 tests/test_models_basic.py
 ```
 ---
 
-## API Manual Testing using cURL
+## API Manual Testing using cURL <a name="curl-testing"></a>
 This section documents the manual testing performed on all API endpoints, covering both positive (Success) and negative (Failure) scenarios to ensure robust validation and error handling.
 
 
@@ -264,7 +264,7 @@ ___
 | **List Place Reviews** | `curl http://127.0.0.1:5000/reviews/places/<ID>/reviews` | `200 OK` List of reviews for that place. |
 
 ---
-## Installation and Setup
+## Installation and Setup <a name="setup"></a>
 1. Clone the Repository:
 ```
 git clone <repository_url>
@@ -287,7 +287,7 @@ python run.py
 - The API will be available at [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
 ---
-## 4. Automated Unit Testing
+## 4. Automated Unit Testing <a name="unit-testing"></a>
 To ensure long-term stability and prevent regressions, we implemented automated tests using unittest.
 - Example: Testing User Persistence:
 ```
@@ -311,7 +311,7 @@ class TestHBnBAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
 ```
 ---
-## 5. Detailed Testing Report summary
+## 5. Detailed Testing Report summary <a name="test-report"></a>
 
 ### Test Execution Summary
 
