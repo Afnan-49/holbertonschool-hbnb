@@ -1,32 +1,38 @@
 from __future__ import annotations
+from app.persistence.repository import SQLAlchemyRepository
 
 from typing import Any, Dict, List, Optional
 
-from app.persistence.repository import InMemoryRepository
+from app.persistence.UserRepository import UserRepository
 from app.models.user import User
 from app.models.place import Place
 from app.models.review import Review
 from app.models.amenity import Amenity
-
-
+from app.persistence.repository import InMemoryRepository
 class HBnBFacade:
     def __init__(self):
-        self.user_repo = InMemoryRepository()
+        self.user_repo = UserRepository()      
         self.place_repo = InMemoryRepository()
         self.review_repo = InMemoryRepository()
         self.amenity_repo = InMemoryRepository()
 
     # ---------- Users ----------
+        
     def create_user(self, user_data: Dict[str, Any]) -> User:
         user = User(
-            email=user_data.get("email"),
-            password=user_data.get("password"),
-            first_name=user_data.get("first_name"),
-            last_name=user_data.get("last_name"),
+            first_name=user_data.get("first_name") or "",
+            last_name=user_data.get("last_name") or "",
+            email=user_data.get("email") or "",
+            password="temp",
+            is_admin=bool(user_data.get("is_admin", False)),
         )
+
+        raw_pw = user_data.get("password") or ""
+        user.hash_password(raw_pw)
+
         user.validate()
 
-        existing = self.user_repo.get_by_attribute("email", user.email)
+        existing = self.user_repo.get_user_by_email(user.email)
         if existing:
             raise ValueError("Email already exists")
 
@@ -50,13 +56,13 @@ class HBnBFacade:
         if "email" in user_data:
             user.email = (user_data.get("email") or "").strip()
         if "password" in user_data:
-            user.password = (user_data.get("password") or "").strip()
+            raw_pw = (user_data.get("password") or "").strip()
+            user.hash_password(raw_pw)            
         if "is_admin" in user_data:
             user.is_admin = bool(user_data.get("is_admin"))
 
         user.validate()
-        user.save()
-        return user
+        return self.user_repo.update(user_id, user_data)
 
     # ---------- Amenities ----------
     def create_amenity(self, data: Dict[str, Any]) -> Amenity:
