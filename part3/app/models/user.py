@@ -14,6 +14,18 @@ class User(BaseModel):
     email = db.Column(db.String(120), nullable=False, unique=True, index=True)
     password = db.Column(db.String(128), nullable=False)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    
+    reviews = db.relationship(
+    "Review",
+    back_populates="user",
+    cascade="all, delete-orphan"
+)
+    places = db.relationship(
+    "Place",
+    back_populates="owner",
+    cascade="all, delete-orphan",
+)
+
 
     # -------------------------
     # Password Hashing

@@ -7,15 +7,25 @@ from app.models.base_model import BaseModel
 class Review(BaseModel):
     __tablename__ = "reviews"
 
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
     text = db.Column(db.String(1024), nullable=False)
     rating = db.Column(db.Integer, nullable=False)
 
-    # (اختياري للـ API الحالية)
-    user_id = db.Column(db.String(36), nullable=False, index=True)
-    place_id = db.Column(db.Integer, nullable=False, index=True)
+    user_id = db.Column(
+        db.String(36),
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
 
+    place_id = db.Column(
+        db.String(36),
+        db.ForeignKey("places.id"),
+        nullable=False
+    )
+
+    user = db.relationship("User", back_populates="reviews")
+    place = db.relationship("Place", back_populates="reviews")
+    
     def validate(self) -> None:
         if not self.text or not self.text.strip():
             raise ValueError("Text is required")
