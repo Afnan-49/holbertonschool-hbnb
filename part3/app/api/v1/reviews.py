@@ -21,32 +21,23 @@ review_output = api.model("Review", {
     "id": fields.String(readOnly=True),
     "text": fields.String,
     "rating": fields.Integer,
-    "user": fields.Nested(api.model("ReviewUserOut", {
-        "id": fields.String,
-        "first_name": fields.String,
-        "last_name": fields.String,
-        "email": fields.String,
-    })),
+    "user_id": fields.String,
     "place_id": fields.String,
     "created_at": fields.String,
     "updated_at": fields.String,
 })
 
 def serialize_review(r):
-    u = r.user
+    
     return {
         "id": r.id,
         "text": r.text,
         "rating": r.rating,
-        "user": {
-            "id": u.id,
-            "first_name": u.first_name,
-            "last_name": u.last_name,
-            "email": u.email,
-        } if u else None,
-        "place_id": r.place.id if r.place else None,
-        "created_at": r.created_at.isoformat(),
-        "updated_at": r.updated_at.isoformat(),
+        "user_id": r.user_id,
+        "place_id": r.place_id,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+        "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+
     }
 
 @api.route("/")

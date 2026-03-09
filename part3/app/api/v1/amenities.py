@@ -4,6 +4,10 @@ from flask import request
 from app.services.facade import facade  # facade instance (Singleton)
 
 api = Namespace("amenities", description="Amenity operations")
+place_in_amenity = api.model("PlaceInAmenity", {
+    "id": fields.String,
+    "title": fields.String,
+})
 
 amenity_input = api.model("AmenityInput", {
     "name": fields.String(required=True),
@@ -12,16 +16,19 @@ amenity_input = api.model("AmenityInput", {
 amenity_output = api.model("Amenity", {
     "id": fields.String(readOnly=True),
     "name": fields.String,
+    "places": fields.List(fields.Nested(place_in_amenity)),
     "created_at": fields.String,
     "updated_at": fields.String,
+
 })
 
 def serialize_amenity(a):
     return {
         "id": a.id,
         "name": a.name,
+        "places": [{"id": p.id, "title": p.title} for p in (a.places or [])],
         "created_at": a.created_at.isoformat(),
-        "updated_at": a.updated_at.isoformat(),
+        "updated_at": a.updated_at.isoformat(),        
     }
 
 @api.route("/")

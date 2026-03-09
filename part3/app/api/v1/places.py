@@ -12,7 +12,15 @@ place_input = api.model("PlaceInput", {
     "latitude": fields.Float(required=True),
     "longitude": fields.Float(required=True),
     "owner_id": fields.String(required=True),
-    "amenity_ids": fields.List(fields.String, required=False, description="List of amenity IDs"),
+
+})
+place_update = api.model("PlaceUpdate", {
+    "title": fields.String(required=False),
+    "description": fields.String(required=False),
+    "price": fields.Float(required=False),
+    "latitude": fields.Float(required=False),
+    "longitude": fields.Float(required=False),
+    "owner_id": fields.String(required=False),
 })
 
 review_in_place = api.model("ReviewInPlace", {
@@ -21,36 +29,20 @@ review_in_place = api.model("ReviewInPlace", {
     "rating": fields.Integer,
     "user_id": fields.String,
 })
-place_output = api.model("Place", {
+place_output = api.model("PlaceOutput", {
     "id": fields.String(readOnly=True),
-    "title": fields.String,
+    "title": fields.String(required=True),
     "description": fields.String,
-    "price": fields.Float,
-    "latitude": fields.Float,
-    "longitude": fields.Float,
-
-    # owner details returned
-    "owner": fields.Nested(api.model("OwnerOut", {
-        "id": fields.String,
-        "first_name": fields.String,
-        "last_name": fields.String,
-        "email": fields.String,
-    })),
-
-    # amenities returned as list of objects
-    "amenities": fields.List(fields.Nested(api.model("AmenityOut", {
-        "id": fields.String,
-        "name": fields.String,
-    }))),
-
+    "price": fields.Float(required=True),
+    "latitude": fields.Float(required=True),
+    "longitude": fields.Float(required=True),
+    "owner_id": fields.String(required=True),
+    "amenities": fields.List(fields.Raw),
     "created_at": fields.String,
     "updated_at": fields.String,
-
-    "reviews": fields.List(fields.Nested(review_in_place)),
 })
 
 def serialize_place(p):
-    owner = p.owner
     return {
         "id": p.id,
         "title": p.title,
@@ -58,25 +50,10 @@ def serialize_place(p):
         "price": p.price,
         "latitude": p.latitude,
         "longitude": p.longitude,
-        "owner": {
-            "id": owner.id,
-            "first_name": owner.first_name,
-            "last_name": owner.last_name,
-            "email": owner.email,
-        } if owner else None,
+        "owner_id": p.owner_id,
         "amenities": [{"id": a.id, "name": a.name} for a in (p.amenities or [])],
-        "created_at": p.created_at.isoformat(),
-        "updated_at": p.updated_at.isoformat(),
-
-        "reviews": [
-    {
-        "id": r.id,
-        "text": r.text,
-        "rating": r.rating,
-        "user_id": r.user.id if r.user else None,
-    }
-    for r in (getattr(p, "reviews", []) or [])
-],
+        "created_at": p.created_at.isoformat() if p.created_at else None,
+        "updated_at": p.updated_at.isoformat() if p.updated_at else None,
     }
 
 @api.route("/")
@@ -106,7 +83,7 @@ class PlaceItem(Resource):
             api.abort(404, "Place not found")
         return serialize_place(place), 200
 
-    @api.expect(place_input, validate=True)
+    @api.expect(place_update, validate=True)
     @api.marshal_with(place_output)
     def put(self, place_id):
         try:
