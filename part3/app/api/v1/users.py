@@ -50,11 +50,13 @@ class UserList(Resource):
         return [serialize_user(u) for u in users], 200
 
     @api.expect(user_input, validate=True)
-    @api.marshal_with(user_output, code=201)
     def post(self):
         try:
             user = facade.create_user(request.json or {})
-            return serialize_user(user), 201
+            return {
+                "id": user.id,
+                "message": "User registered successfully"
+            }, 201
         except ValueError as e:
             api.abort(400, str(e))
 

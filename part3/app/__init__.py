@@ -13,6 +13,7 @@ def create_app(config_class="config.DevelopmentConfig"):
     
     app.config.from_object(config_class)
     db.init_app(app) 
+    bcrypt.init_app(app)
     
     from app.services.facade import HBnBFacade
     from app.api.v1.users import api as users_ns

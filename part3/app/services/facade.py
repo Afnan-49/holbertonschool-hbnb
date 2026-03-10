@@ -63,7 +63,8 @@ class HBnBFacade:
             user.is_admin = bool(user_data.get("is_admin"))
 
         user.validate()
-        return self.user_repo.update(user_id, user_data)
+        db.session.commit()
+        return user
 
     # ---------- Amenities ----------
     def create_amenity(self, data: Dict[str, Any]) -> Amenity:
