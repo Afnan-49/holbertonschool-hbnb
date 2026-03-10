@@ -187,9 +187,9 @@ class HBnBFacade:
                 raise ValueError(f"Amenity not found: {aid}")
             new_amenities.append(a)
 
-        place.amenities = new_amenities    
+            place.amenities = new_amenities    
             # تحديث قائمة المعرفات الداخلية
-        place.amenity_ids = [a.id for a in new_amenities]
+            place.amenity_ids = [a.id for a in new_amenities]
             
       
 
