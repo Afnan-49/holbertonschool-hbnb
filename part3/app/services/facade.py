@@ -1,4 +1,5 @@
 from __future__ import annotations
+import email
 from app.persistence.repository import SQLAlchemyRepository
 
 from typing import Any, Dict, List, Optional
@@ -65,7 +66,10 @@ class HBnBFacade:
         user.validate()
         db.session.commit()
         return user
-
+    
+    def get_user_by_email(self, email: str):
+        return self.user_repo.get_user_by_email(email)    
+    
     # ---------- Amenities ----------
     def create_amenity(self, data: Dict[str, Any]) -> Amenity:
         name = (data.get("name") or "").strip()
