@@ -1,3 +1,4 @@
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource, fields
 from flask import request
 from app.services.facade import facade
@@ -72,7 +73,20 @@ class UserItem(Resource):
 
     @api.expect(user_update, validate=True)
     @api.marshal_with(user_output)
+    @jwt_required()
     def put(self, user_id):
+        
+        current_user_id = get_jwt_identity()
+
+        if str(current_user_id) != str(user_id):
+            api.abort(403, "Unauthorized action")
+            # return {"error": "Unauthorized action"}, 403 --- IGNORE ---
+
+        data = request.json or {}
+
+        if "email" in data or "password" in data:
+            api.abort(400, "You cannot modify email or password.")
+    
         try:
             user = facade.update_user(user_id, request.json or {})
             if not user:

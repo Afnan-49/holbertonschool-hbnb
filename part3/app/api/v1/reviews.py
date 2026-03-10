@@ -1,3 +1,4 @@
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restx import Namespace, Resource, fields
 from flask import request
 
@@ -8,7 +9,6 @@ api = Namespace("reviews", description="Review operations")
 review_input = api.model("ReviewInput", {
     "text": fields.String(required=True),
     "rating": fields.Integer(required=True, description="1..5"),
-    "user_id": fields.String(required=True),
     "place_id": fields.String(required=True),
 })
 
@@ -50,9 +50,23 @@ class ReviewList(Resource):
 
     @api.expect(review_input, validate=True)
     @api.marshal_with(review_output, code=201)
+    @jwt_required()
     def post(self):
         try:
-            review = facade.create_review(request.json or {})
+            data= request.json or {}
+            current_user_id = get_jwt_identity()
+            place_id = data.get("place_id")
+            place = facade.get_place(place_id)
+            if not place:
+                api.abort(404, "Place not found")
+            if str(place.owner_id) == str(current_user_id):
+                api.abort(400, "You cannot review your own place.")
+                reviews = facade.list_reviews_by_place(place_id)
+                for review in reviews:
+                    if str(review.user_id) == str(current_user_id):
+                        api.abort(400, "You have already reviewed this place.")
+                data["user_id"] = current_user_id    
+            review = facade.create_review(data)
             return serialize_review(review), 201
         except ValueError as e:
             api.abort(400, str(e))
