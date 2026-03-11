@@ -61,13 +61,14 @@ class ReviewList(Resource):
                 api.abort(404, "Place not found")
             if str(place.owner_id) == str(current_user_id):
                 api.abort(400, "You cannot review your own place.")
-                reviews = facade.list_reviews_by_place(place_id)
-                for review in reviews:
-                    if str(review.user_id) == str(current_user_id):
-                        api.abort(400, "You have already reviewed this place.")
-                data["user_id"] = current_user_id    
+            reviews = facade.list_reviews_by_place(place_id)
+            for review in reviews:
+                if str(review.user_id) == str(current_user_id):
+                    api.abort(400, "You have already reviewed this place.")
+            data["user_id"] = current_user_id    
             review = facade.create_review(data)
             return serialize_review(review), 201
+        
         except ValueError as e:
             api.abort(400, str(e))
 
@@ -83,7 +84,17 @@ class ReviewItem(Resource):
 
     @api.expect(review_update, validate=True)
     @api.marshal_with(review_output)
+    @jwt_required()
     def put(self, review_id):
+        current_user_id = get_jwt_identity()
+        review = facade.get_review(review_id)
+        
+        if not review:
+            api.abort(404, "Review not found")
+        
+        if str(review.user_id) != str(current_user_id):
+            api.abort(403, "Unauthorized action")
+                
         try:
             review = facade.update_review(review_id, request.json or {})
             if not review:
@@ -91,11 +102,19 @@ class ReviewItem(Resource):
             return serialize_review(review), 200
         except ValueError as e:
             api.abort(400, str(e))
-
+            
+    @jwt_required()
     def delete(self, review_id):
-        deleted = facade.delete_review(review_id)
-        if not deleted:
+        current_user_id = get_jwt_identity()
+        review = facade.get_review(review_id)
+        
+        if not review:
             api.abort(404, "Review not found")
+        if str(review.user_id) != str(current_user_id):
+            api.abort(403, "Unauthorized action")
+            
+        facade.delete_review(review_id)
+        
         return {"message": "Review deleted"}, 200
 
 
