@@ -1,4 +1,4 @@
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import get_jwt, jwt_required, get_jwt_identity
 from flask_restx import Namespace, Resource, fields
 from flask import request
 
@@ -97,12 +97,14 @@ class PlaceItem(Resource):
     def put(self, place_id):
         
         current_user_id = get_jwt_identity()
+        claims = get_jwt()
+        is_admin = claims.get("is_admin", False)
         place = facade.get_place(place_id)
 
         if not place:
             api.abort(404, "Place not found")
 
-        if str(place.owner_id) != str(current_user_id):
+        if not is_admin and str(place.owner_id) != str(current_user_id):
             api.abort(403, "Unauthorized action")
         
         try:

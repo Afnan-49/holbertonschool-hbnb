@@ -1,4 +1,4 @@
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from flask_restx import Namespace, Resource, fields
 from flask import request
 
@@ -87,12 +87,15 @@ class ReviewItem(Resource):
     @jwt_required()
     def put(self, review_id):
         current_user_id = get_jwt_identity()
+        claims = get_jwt()
+        is_admin = claims.get("is_admin", False)
+        
         review = facade.get_review(review_id)
         
         if not review:
             api.abort(404, "Review not found")
         
-        if str(review.user_id) != str(current_user_id):
+        if not is_admin and str(review.user_id) != str(current_user_id):
             api.abort(403, "Unauthorized action")
                 
         try:
@@ -106,11 +109,13 @@ class ReviewItem(Resource):
     @jwt_required()
     def delete(self, review_id):
         current_user_id = get_jwt_identity()
+        claims = get_jwt()
+        is_admin = claims.get("is_admin", False)
         review = facade.get_review(review_id)
         
         if not review:
             api.abort(404, "Review not found")
-        if str(review.user_id) != str(current_user_id):
+        if not is_admin and str(review.user_id) != str(current_user_id):
             api.abort(403, "Unauthorized action")
             
         facade.delete_review(review_id)

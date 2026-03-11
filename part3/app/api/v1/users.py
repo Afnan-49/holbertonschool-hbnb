@@ -1,4 +1,4 @@
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import get_jwt_identity, jwt_required, get_jwt
 from flask_restx import Namespace, Resource, fields
 from flask import request
 from app.services.facade import facade
@@ -77,15 +77,25 @@ class UserItem(Resource):
     def put(self, user_id):
         
         current_user_id = get_jwt_identity()
+        claims = get_jwt()
+        is_admin = claims.get("is_admin", False)
+        
 
-        if str(current_user_id) != str(user_id):
+        if not is_admin and str(current_user_id) != str(user_id):
             api.abort(403, "Unauthorized action")
             # return {"error": "Unauthorized action"}, 403 --- IGNORE ---
 
         data = request.json or {}
+        
+        if not is_admin and str(current_user_id) != str(user_id):
+            api.abort(403, "Unauthorized action")
 
-        if "email" in data or "password" in data:
+        if not is_admin and ("email" in data or "password" in data):
             api.abort(400, "You cannot modify email or password.")
+        if is_admin and "email" in data:
+            existing_user = facade.get_user_by_email(data["email"])
+            if existing_user and str(existing_user.id) != str(user_id):
+                api.abort(400, "Email already in use")
     
         try:
             user = facade.update_user(user_id, request.json or {})
