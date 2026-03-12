@@ -118,166 +118,460 @@ Authorization: Bearer JWT_TOKEN
 ```
 
 ---
-
 ## Authenticated User Endpoints
 
-Authenticated User Endpoints
+This section describes the authenticated endpoints secured with JWT authentication.  
+These endpoints allow authenticated users to create and modify places and reviews, as well as update their own profile data.
 
-| Endpoint                    | Method                  | Description |
-| --------------------------- | ----------------------- | ----------- |
-| POST /places/               | Create a new place      |             |
-| PUT /places/<place_id>      | Update a place          |             |
-| POST /reviews/              | Create review           |             |
-| PUT /reviews/<review_id>    | Update review           |             |
-| DELETE /reviews/<review_id> | Delete review           |             |
-| PUT /users/<user_id>        | Update user information |             |
+### Protected Endpoints
 
-Users can only modify resources they own.
+The following endpoints require a valid JWT token:
 
-Example error response:
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/places/` | POST | Create a new place |
+| `/places/<place_id>` | PUT | Update an existing place |
+| `/reviews/` | POST | Create a new review |
+| `/reviews/<review_id>` | PUT | Update an existing review |
+| `/reviews/<review_id>` | DELETE | Delete a review |
+| `/users/<user_id>` | PUT | Update the authenticated user’s own details |
+
+### Public Endpoints
+
+The following endpoints remain publicly accessible and do not require a JWT token:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/places/` | GET | Retrieve all available places |
+| `/places/<place_id>` | GET | Retrieve detailed information about a specific place |
+
+### Authentication Logic
+
+Protected endpoints use the `@jwt_required()` decorator from `flask-jwt-extended`.
+
+Example:
 
 ```python
-{
-"message": "Unauthorized action"
-}
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
+@jwt_required()
+def post(self):
+    current_user_id = get_jwt_identity()
 ```
 
-Users cannot modify email and password.
+The authenticated user's ID is extracted from the JWT token and used to validate ownership and permissions.
 
 ---
 
-## Administrator Access
+## Validation Rules
 
-The system implements Role-Based Access Control (RBAC).
+### Create Place
 
-Administrators have extended privileges.
+When creating a place:
 
-Admin users can:
+- The user must be authenticated
+- The `owner_id` is automatically assigned from the authenticated user token
+- A user cannot manually assign another owner
 
-Create users
+### Update Place
 
-Modify any user
+When updating a place:
 
-Modify email and password
+- The user must be authenticated
+- Only the owner of the place can modify it
+- If the user is not the owner, the request is denied
 
-Create amenities
+### Create Review
 
-Modify amenities
+When creating a review:
 
-Bypass ownership restrictions
+- The user must be authenticated
+- The user cannot review their own place
+- The user can only review the same place once
 
-### Admin Endpoints
+### Update Review
 
-| Endpoint                    | Method          |
-| --------------------------- | --------------- |
-| POST /users/                | Create user     |
-| PUT /users/<user_id>        | Modify any user |
-| POST /amenities/            | Create amenity  |
-| PUT /amenities/<amenity_id> | Modify amenity  |
+When updating a review:
+
+- The user must be authenticated
+- Only the creator of the review can modify it
+
+### Delete Review
+
+When deleting a review:
+
+- The user must be authenticated
+- Only the creator of the review can delete it
+
+### Update User Information
+
+When updating user information:
+
+- The user must be authenticated
+- A user can only update their own profile
+- Regular users cannot modify `email` or `password` using this endpoint
+
+---
+
+## Error Messages
+
+| HTTP Status Code | Message | Description |
+|------------------|---------|-------------|
+| `400` | `Invalid credentials` | Incorrect email or password during login |
+| `400` | `You cannot review your own place.` | A user attempted to review a place they own |
+| `400` | `You have already reviewed this place.` | A user attempted to submit more than one review for the same place |
+| `400` | `You cannot modify email or password.` | A regular user attempted to modify restricted fields |
+| `401` | `Missing Authorization Header` | No JWT token was provided in the request |
+| `401` | `Token has expired` | The JWT token is no longer valid |
+| `403` | `Unauthorized action` | The authenticated user attempted to modify or delete a resource they do not own |
+| `404` | `User not found` | The requested user does not exist |
+| `404` | `Place not found` | The requested place does not exist |
+| `404` | `Review not found` | The requested review does not exist |
+
+---
+
+## Testing Examples
+
+### Login
+
+```bash
+curl -X POST http://127.0.0.1:5000/auth/login \
+-H "Content-Type: application/json" \
+-d '{
+  "email": "user@example.com",
+  "password": "123456"
+}'
+```
+
+### Create Place
+
+```bash
+curl -X POST http://127.0.0.1:5000/places/ \
+-H "Authorization: Bearer YOUR_TOKEN" \
+-H "Content-Type: application/json" \
+-d '{
+  "title": "New Place",
+  "description": "Nice place",
+  "price": 100,
+  "latitude": 24.7,
+  "longitude": 46.6
+}'
+```
+
+### Update Place
+
+```bash
+curl -X PUT http://127.0.0.1:5000/places/PLACE_ID \
+-H "Authorization: Bearer YOUR_TOKEN" \
+-H "Content-Type: application/json" \
+-d '{
+  "title": "Updated Place"
+}'
+```
+
+### Create Review
+
+```bash
+curl -X POST http://127.0.0.1:5000/reviews/ \
+-H "Authorization: Bearer YOUR_TOKEN" \
+-H "Content-Type: application/json" \
+-d '{
+  "text": "Great place!",
+  "rating": 5,
+  "place_id": "PLACE_ID"
+}'
+```
+
+### Update Review
+
+```bash
+curl -X PUT http://127.0.0.1:5000/reviews/REVIEW_ID \
+-H "Authorization: Bearer YOUR_TOKEN" \
+-H "Content-Type: application/json" \
+-d '{
+  "text": "Updated review"
+}'
+```
+
+### Delete Review
+
+```bash
+curl -X DELETE http://127.0.0.1:5000/reviews/REVIEW_ID \
+-H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Update User Information
+
+```bash
+curl -X PUT http://127.0.0.1:5000/users/USER_ID \
+-H "Authorization: Bearer YOUR_TOKEN" \
+-H "Content-Type: application/json" \
+-d '{
+  "first_name": "Updated Name"
+}'
+```
+
+### Public Endpoint Example
+
+```bash
+curl -X GET http://127.0.0.1:5000/places/
+```
+
+```bash
+curl -X GET http://127.0.0.1:5000/places/PLACE_ID
+```
+---
+
+## Administrator Access (RBAC)
+
+This section describes administrator privileges implemented using **Role-Based Access Control (RBAC)**.
+
+Administrators have elevated permissions that allow them to manage system resources and bypass certain ownership restrictions.
+
+Administrator privileges are determined by the `is_admin` claim included in the JWT token.
+
+Example:
 
 ```python
+from flask_jwt_extended import get_jwt
+
+claims = get_jwt()
+is_admin = claims.get("is_admin", False)
+```
+
+If `is_admin` is `True`, the user is granted administrator privileges.
+
+---
+
+## Admin-Only Endpoints
+
+The following endpoints are restricted to administrators only.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/users/` | POST | Create a new user |
+| `/users/<user_id>` | PUT | Modify any user's details |
+| `/amenities/` | POST | Create a new amenity |
+| `/amenities/<amenity_id>` | PUT | Modify an amenity |
+
+If a non-admin user attempts to access these endpoints, the request will be rejected.
+
+Example error response:
+
+```json
+{
+  "error": "Admin privileges required"
+}
+```
+
+---
+
+## Admin Privileges
+
+Administrators can perform the following actions:
+
+- Create new users
+- Modify any user's information
+- Modify email and password fields
+- Create amenities
+- Modify amenities
+- Modify any place
+- Modify or delete any review
+
+This allows administrators to manage the entire platform.
+
+---
+
+## Ownership Bypass
+
+Regular users can only modify resources they own.
+
+Administrators bypass this restriction.
+
+Example logic:
+
+```python
+claims = get_jwt()
+is_admin = claims.get("is_admin", False)
+
+if not is_admin and place.owner_id != current_user_id:
+    return {"error": "Unauthorized action"}, 403
+```
+
+This means:
+
+- **Regular users** → only modify their own resources
+- **Admins** → modify any resource
+
+---
+
+## Admin Testing Examples
+
+### Create User
+
+```bash
+curl -X POST http://127.0.0.1:5000/users/ \
+-H "Authorization: Bearer ADMIN_TOKEN" \
+-H "Content-Type: application/json" \
+-d '{
+  "first_name": "New",
+  "last_name": "User",
+  "email": "newuser@example.com",
+  "password": "123456"
+}'
+```
+
+### Modify User
+
+```bash
+curl -X PUT http://127.0.0.1:5000/users/USER_ID \
+-H "Authorization: Bearer ADMIN_TOKEN" \
+-H "Content-Type: application/json" \
+-d '{
+  "email": "updated_email@example.com"
+}'
+```
+
+### Create Amenity
+
+```bash
 curl -X POST http://127.0.0.1:5000/amenities/ \
 -H "Authorization: Bearer ADMIN_TOKEN" \
 -H "Content-Type: application/json" \
 -d '{
-"name": "Swimming Pool"
+  "name": "Swimming Pool"
+}'
+```
+
+### Modify Amenity
+
+```bash
+curl -X PUT http://127.0.0.1:5000/amenities/AMENITY_ID \
+-H "Authorization: Bearer ADMIN_TOKEN" \
+-H "Content-Type: application/json" \
+-d '{
+  "name": "Updated Amenity"
 }'
 ```
 
 ---
 
-## SQLAlchemy Repository
+## Admin Error Responses
 
-The persistence layer uses the Repository Pattern.
-
-Repositories manage database operations for each entity.
-
-Main operations include:
-
-create
-
-retrieve
-
-update
-
-delete
-
-### Example:
-
-```python
-class SQLAlchemyRepository(Repository):
-    def add(self, obj):
-        db.session.add(obj)
-        db.session.commit()
-
-```
+| HTTP Status Code | Message | Description |
+|------------------|---------|-------------|
+| `403` | `Admin privileges required` | Non-admin attempted to access an admin endpoint |
+| `400` | `Email already registered` | Attempted to create a user with an existing email |
+| `403` | `Unauthorized action` | Non-admin attempted to modify another user's resource |
 
 ---
 
-## User Entity Mapping
+## Security Summary
 
-The User model is mapped to the database using SQLAlchemy.
+The RBAC system ensures:
 
-### Attributes include:
-
-id
-
-first_name
-
-last_name
-
-email
-
-password
-
-is_admin
-
-created_at
-
-updated_at
+- Only administrators can manage users and amenities
+- Ownership restrictions protect user data
+- Administrators retain full system control
+- JWT authentication secures all protected endpoints
 
 ---
 
-## Place, Review and Amenity Mapping
+## Database Schema
 
-The following entities are mapped using SQLAlchemy:
+The HBnB API uses **SQLAlchemy ORM** to manage database persistence.
+
+The database consists of four main entities:
+
+- **User**
+- **Place**
+- **Review**
+- **Amenity**
+
+Each entity inherits common attributes from the base model:
+
+| Field | Description |
+|------|-------------|
+| `id` | Unique identifier |
+| `created_at` | Creation timestamp |
+| `updated_at` | Last update timestamp |
+
+---
+
+## Entities
+
+### User
+
+Represents a platform user.
+
+| Field | Type | Description |
+|------|------|-------------|
+| id | UUID | Unique user identifier |
+| first_name | String | User's first name |
+| last_name | String | User's last name |
+| email | String | Unique user email |
+| password | String | Hashed password |
+| is_admin | Boolean | Admin privilege flag |
+
+---
 
 ### Place
 
 Represents a property listed by a user.
 
-### Review
-
-Represents a user review of a place.
-
-### Amenity
-
-Represents features such as WiFi or parking.
-
-### Entity Relationships
-
-Relationships implemented in the database include:
-
-| Relationship      | Description                       |
-| ----------------- | --------------------------------- |
-| User → Places     | A user can own multiple places    |
-| Place → Reviews   | A place can have multiple reviews |
-| User → Reviews    | A user can write reviews          |
-| Place ↔ Amenities | Many-to-many relationship         |
+| Field | Type | Description |
+|------|------|-------------|
+| id | UUID | Unique place identifier |
+| title | String | Place title |
+| description | String | Place description |
+| price | Integer | Price per night |
+| latitude | Float | Location latitude |
+| longitude | Float | Location longitude |
+| owner_id | UUID | Reference to the user who owns the place |
 
 ---
 
-## Database Initialization Scripts
+### Review
 
-SQL scripts are used to initialize database tables and seed initial data.
+Represents a review written by a user for a place.
 
-Example tasks include:
+| Field | Type | Description |
+|------|------|-------------|
+| id | UUID | Unique review identifier |
+| text | String | Review content |
+| rating | Integer | Rating value |
+| user_id | UUID | Author of the review |
+| place_id | UUID | Reviewed place |
 
-creating tables
+---
 
-inserting default amenities
+### Amenity
 
-preparing development data
+Represents features provided by places.
+
+Examples:
+
+- WiFi
+- Parking
+- Swimming Pool
+
+| Field | Type | Description |
+|------|------|-------------|
+| id | UUID | Unique amenity identifier |
+| name | String | Amenity name |
+
+---
+
+## Entity Relationships
+
+The following relationships exist in the system:
+
+| Relationship | Description |
+|-------------|-------------|
+| User → Place | One user can own multiple places |
+| Place → Review | One place can have many reviews |
+| User → Review | One user can write multiple reviews |
+| Place ↔ Amenity | Many-to-many relationship |
 
 ---
 
