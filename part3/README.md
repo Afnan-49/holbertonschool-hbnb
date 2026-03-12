@@ -6,7 +6,7 @@ The system uses **JWT authentication**, **SQLAlchemy ORM**, and **role-based acc
 
 ---
 
-# Table of Contents
+## Table of Contents
 
 - Technologies
 - Application Configuration
@@ -25,7 +25,7 @@ The system uses **JWT authentication**, **SQLAlchemy ORM**, and **role-based acc
 
 ---
 
-# Technologies
+## Technologies
 
 - Python
 - Flask
@@ -55,6 +55,7 @@ db = SQLAlchemy()
 bcrypt = Bcrypt()
 jwt = JWTManager()
 
+```
 ---
 
 ## Password Hashing
