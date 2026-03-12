@@ -51,20 +51,28 @@ class ReviewList(Resource):
     @api.expect(review_input, validate=True)
     @api.marshal_with(review_output, code=201)
     @jwt_required()
+    
     def post(self):
         try:
             data= request.json or {}
             current_user_id = get_jwt_identity()
+            claims = get_jwt()
+            is_admin = claims.get("is_admin", False)
+            
             place_id = data.get("place_id")
             place = facade.get_place(place_id)
+            
             if not place:
                 api.abort(404, "Place not found")
-            if str(place.owner_id) == str(current_user_id):
+                
+            if not is_admin and str(place.owner_id) == str(current_user_id):
                 api.abort(400, "You cannot review your own place.")
+                
             reviews = facade.list_reviews_by_place(place_id)
             for review in reviews:
                 if str(review.user_id) == str(current_user_id):
                     api.abort(400, "You have already reviewed this place.")
+                    
             data["user_id"] = current_user_id    
             review = facade.create_review(data)
             return serialize_review(review), 201
@@ -120,7 +128,7 @@ class ReviewItem(Resource):
             
         facade.delete_review(review_id)
         
-        return {"message": "Review deleted"}, 200
+        return {"message": "Review deleted successfully"}, 200
 
 
 #  list reviews for a specific place

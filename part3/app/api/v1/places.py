@@ -21,7 +21,6 @@ place_update = api.model("PlaceUpdate", {
     "price": fields.Float(required=False),
     "latitude": fields.Float(required=False),
     "longitude": fields.Float(required=False),
-    "owner_id": fields.String(required=False),
 })
 
 review_in_place = api.model("ReviewInPlace", {

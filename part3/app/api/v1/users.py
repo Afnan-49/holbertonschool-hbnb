@@ -52,6 +52,13 @@ class UserList(Resource):
 
     @api.expect(user_input, validate=True)
     def post(self):
+        
+        claims = get_jwt()
+        is_admin = claims.get("is_admin", False)
+
+        if not is_admin:
+            api.abort(403, "Admin privileges required")
+            
         try:
             user = facade.create_user(request.json or {})
             return {
