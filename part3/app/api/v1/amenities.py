@@ -1,5 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
+from flask_jwt_extended import get_jwt, jwt_required
 
 from app.services.facade import facade  # facade instance (Singleton)
 
@@ -41,6 +42,7 @@ class AmenityList(Resource):
 
     @api.expect(amenity_input, validate=True)
     @api.marshal_with(amenity_output, code=201)
+    @jwt_required()
     def post(self):
         claims = get_jwt()
         is_admin = claims.get("is_admin", False)
@@ -66,6 +68,7 @@ class AmenityItem(Resource):
 
     @api.expect(amenity_input, validate=True)
     @api.marshal_with(amenity_output)
+    @jwt_required()
     def put(self, amenity_id):
         claims = get_jwt()
         is_admin = claims.get("is_admin", False)

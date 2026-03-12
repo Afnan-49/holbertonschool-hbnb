@@ -51,6 +51,7 @@ class UserList(Resource):
         return [serialize_user(u) for u in users], 200
 
     @api.expect(user_input, validate=True)
+    @jwt_required()
     def post(self):
         
         claims = get_jwt()
