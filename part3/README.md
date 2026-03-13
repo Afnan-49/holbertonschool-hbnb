@@ -38,6 +38,31 @@ The system uses **JWT authentication**, **SQLAlchemy ORM**, and **role-based acc
 
 ---
 
+## Setup Instructions
+
+1. Clone the repository
+
+git clone https://github.com/laradreamer79/holbertonschool-hbnb.git
+
+2. Go to part3
+
+cd part3
+
+3. Create a virtual environment
+
+python3 -m venv venv
+source venv/bin/activate
+
+4. Install dependencies
+
+pip install -r requirements.txt
+
+5. Run the application
+
+flask run
+
+---
+
 ## Application Configuration
 
 The application factory initializes the core components required for the API.
@@ -572,6 +597,21 @@ The following relationships exist in the system:
 | Place → Review | One place can have many reviews |
 | User → Review | One user can write multiple reviews |
 | Place ↔ Amenity | Many-to-many relationship |
+
+---
+
+## Database Initialization
+
+Create database tables using Flask shell:
+
+flask shell
+
+from app import db
+db.create_all()
+
+Insert initial data:
+
+sqlite3 instance/development.db < sql/seed.sql
 
 ---
 
