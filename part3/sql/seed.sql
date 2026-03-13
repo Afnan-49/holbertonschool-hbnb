@@ -1,5 +1,5 @@
 -- seed.sql
-USE hbnb_db;
+
 
 -- Insert administrator user
 INSERT INTO users (id, first_name, last_name, email, password, is_admin)
