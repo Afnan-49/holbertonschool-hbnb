@@ -50,6 +50,7 @@ The system uses **JWT authentication**, **SQLAlchemy ORM**, and **role-based acc
 
 ## Project Structure
 
+```bash
 part3/
 │
 ├── app/
@@ -68,6 +69,7 @@ part3/
 │
 ├── requirements.txt
 └── README.md
+```
 
 ---
 
@@ -99,7 +101,7 @@ pip install -r requirements.txt
 5. Run the application
 
 ```bash
-flask run
+python3 run.py
 ```
 ---
 ## API Documentation
