@@ -1,4 +1,5 @@
 from __future__ import annotations
+import email
 from app.persistence.repository import SQLAlchemyRepository
 
 from typing import Any, Dict, List, Optional
@@ -63,8 +64,12 @@ class HBnBFacade:
             user.is_admin = bool(user_data.get("is_admin"))
 
         user.validate()
-        return self.user_repo.update(user_id, user_data)
-
+        db.session.commit()
+        return user
+    
+    def get_user_by_email(self, email: str):
+        return self.user_repo.get_user_by_email(email)    
+    
     # ---------- Amenities ----------
     def create_amenity(self, data: Dict[str, Any]) -> Amenity:
         name = (data.get("name") or "").strip()
@@ -182,9 +187,9 @@ class HBnBFacade:
                 raise ValueError(f"Amenity not found: {aid}")
             new_amenities.append(a)
 
-        place.amenities = new_amenities    
+            place.amenities = new_amenities    
             # تحديث قائمة المعرفات الداخلية
-        place.amenity_ids = [a.id for a in new_amenities]
+            place.amenity_ids = [a.id for a in new_amenities]
             
       
 

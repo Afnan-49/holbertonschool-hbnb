@@ -1,7 +1,9 @@
+from flask_jwt_extended import get_jwt, jwt_required, get_jwt_identity
 from flask_restx import Namespace, Resource, fields
 from flask import request
 
 from app.services.facade import facade
+from app.models import place
 
 api = Namespace("places", description="Place operations")
 
@@ -11,7 +13,6 @@ place_input = api.model("PlaceInput", {
     "price": fields.Float(required=True),
     "latitude": fields.Float(required=True),
     "longitude": fields.Float(required=True),
-    "owner_id": fields.String(required=True),
 
 })
 place_update = api.model("PlaceUpdate", {
@@ -20,7 +21,6 @@ place_update = api.model("PlaceUpdate", {
     "price": fields.Float(required=False),
     "latitude": fields.Float(required=False),
     "longitude": fields.Float(required=False),
-    "owner_id": fields.String(required=False),
 })
 
 review_in_place = api.model("ReviewInPlace", {
@@ -66,9 +66,15 @@ class PlaceList(Resource):
 
     @api.expect(place_input, validate=True)
     @api.marshal_with(place_output, code=201)
+    
+    @jwt_required()
     def post(self):
         try:
-            place = facade.create_place(request.json or {})
+            data = request.json or {}
+            current_user_id = get_jwt_identity()
+            data["owner_id"] = current_user_id
+
+            place = facade.create_place(data)
             return serialize_place(place), 201
         except ValueError as e:
             api.abort(400, str(e))
@@ -85,11 +91,23 @@ class PlaceItem(Resource):
 
     @api.expect(place_update, validate=True)
     @api.marshal_with(place_output)
+    
+    @jwt_required()
     def put(self, place_id):
+        
+        current_user_id = get_jwt_identity()
+        claims = get_jwt()
+        is_admin = claims.get("is_admin", False)
+        place = facade.get_place(place_id)
+
+        if not place:
+            api.abort(404, "Place not found")
+
+        if not is_admin and str(place.owner_id) != str(current_user_id):
+            api.abort(403, "Unauthorized action")
+        
         try:
             place = facade.update_place(place_id, request.json or {})
-            if not place:
-                api.abort(404, "Place not found")
             return serialize_place(place), 200
         except ValueError as e:
             api.abort(400, str(e))
