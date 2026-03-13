@@ -38,8 +38,8 @@ def serialize_user(u):
         "last_name": u.last_name,
         "email": u.email,
         "is_admin": u.is_admin,
-        "created_at": u.created_at.isoformat(),
-        "updated_at": u.updated_at.isoformat(),
+        "created_at": u.created_at.isoformat() if u.created_at else None,
+        "updated_at": u.updated_at.isoformat() if u.updated_at else None,
     }
 
 @api.route("/")
