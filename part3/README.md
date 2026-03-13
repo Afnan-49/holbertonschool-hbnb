@@ -8,20 +8,30 @@ The system uses **JWT authentication**, **SQLAlchemy ORM**, and **role-based acc
 
 ## Table of Contents
 
-- Technologies
-- Application Configuration
-- Password Hashing
-- JWT Authentication
-- Authenticated User Endpoints
-- Administrator Access
-- SQLAlchemy Repository
-- User Entity Mapping
-- Place, Review and Amenity Mapping
-- Entity Relationships
-- Database Initialization Scripts
-- Database Diagrams
-- Error Codes
-- Testing Examples
+- [Technologies](#technologies)
+- [Project Structure](#project-structure)
+- [Setup Instructions](#setup-instructions)
+- [Application Configuration](#application-configuration)
+- [API Documentation](#api-documentation)
+- [Password Hashing](#password-hashing)
+- [JWT Authentication](#jwt-authentication)
+- [Authenticated User Endpoints](#authenticated-user-endpoints)
+- [Validation Rules](#validation-rules)
+- [Error Messages](#error-messages)
+- [Testing Examples](#testing-examples)
+- [Administrator Access (RBAC)](#administrator-access-rbac)
+- [Admin-Only Endpoints](#admin-only-endpoints)
+- [Admin Privileges](#admin-privileges)
+- [Ownership Bypass](#ownership-bypass)
+- [Admin Testing Examples](#admin-testing-examples)
+- [Admin Error Responses](#admin-error-responses)
+- [Security Summary](#security-summary)
+- [Database Schema](#database-schema)
+- [Entities](#entities)
+- [Entity Relationships](#entity-relationships)
+- [Database Initialization](#database-initialization)
+- [Database Diagram](#database-diagram)
+- [Summary](#summary)
 
 ---
 
@@ -38,28 +48,65 @@ The system uses **JWT authentication**, **SQLAlchemy ORM**, and **role-based acc
 
 ---
 
+## Project Structure
+
+part3/
+│
+├── app/
+│   ├── api/
+│   ├── models/
+│   ├── repositories/
+│   ├── services/
+│   └── __init__.py
+│
+├── instance/
+│   └── development.db
+│
+├── sql/
+│   ├── schema.sql
+│   └── seed.sql
+│
+├── requirements.txt
+└── README.md
+
+---
+
 ## Setup Instructions
 
 1. Clone the repository
-
+```bash
 git clone https://github.com/laradreamer79/holbertonschool-hbnb.git
-
+```
 2. Go to part3
 
+```bash
 cd part3
+```
 
 3. Create a virtual environment
 
+```bash
 python3 -m venv venv
 source venv/bin/activate
+```
 
 4. Install dependencies
 
+```bash
 pip install -r requirements.txt
+```
 
 5. Run the application
 
+```bash
 flask run
+```
+---
+## API Documentation
+
+The API documentation is available through Swagger UI:
+
+http://127.0.0.1:5000/
 
 ---
 
@@ -114,7 +161,7 @@ Users must log in to obtain a token and include it in the request header.
 ### Login Endpoint
 
 ```python
-user.verify_password(password)
+POST /auth/login
 ```
 
 ### Example Request
@@ -604,14 +651,19 @@ The following relationships exist in the system:
 
 Create database tables using Flask shell:
 
+```bash
 flask shell
-
+```
+```bash
 from app import db
 db.create_all()
+```bash
 
 Insert initial data:
 
+```bash
 sqlite3 instance/development.db < sql/seed.sql
+```
 
 ---
 
