@@ -659,7 +659,7 @@ flask shell
 ```bash
 from app import db
 db.create_all()
-```bash
+```
 
 Insert initial data:
 
