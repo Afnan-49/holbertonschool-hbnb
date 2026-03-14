@@ -1,15 +1,13 @@
 from __future__ import annotations
-from app.persistence.repository import SQLAlchemyRepository
-
 from typing import Any, Dict, List, Optional
-
+from app import db
+from app.persistence.repository import SQLAlchemyRepository
 from app.persistence.UserRepository import UserRepository
 from app.models.user import User
 from app.models.place import Place
 from app.models.review import Review
 from app.models.amenity import Amenity
 
-from app import db
 class HBnBFacade:
     def __init__(self):
         self.user_repo = UserRepository()      
@@ -24,23 +22,24 @@ class HBnBFacade:
             first_name=user_data.get("first_name") or "",
             last_name=user_data.get("last_name") or "",
             email=user_data.get("email") or "",
-            password="temp",
+            password="temp", # Placeholder before hashing
             is_admin=bool(user_data.get("is_admin", False)),
         )
-
         raw_pw = user_data.get("password") or ""
         user.hash_password(raw_pw)
-
         user.validate()
 
-        existing = self.user_repo.get_user_by_email(user.email)
-        if existing:
+        if self.user_repo.get_user_by_email(user.email):
             raise ValueError("Email already exists")
 
         return self.user_repo.add(user)
 
     def get_user(self, user_id: str) -> Optional[User]:
         return self.user_repo.get(user_id)
+
+    def get_user_by_email(self, email: str) -> Optional[User]:
+        """Integrated from File-2: Useful for auth and validation checks."""
+        return self.user_repo.get_user_by_email(email)
 
     def list_users(self) -> List[User]:
         return self.user_repo.get_all()
@@ -57,8 +56,7 @@ class HBnBFacade:
         if "email" in user_data:
             user.email = (user_data.get("email") or "").strip()
         if "password" in user_data:
-            raw_pw = (user_data.get("password") or "").strip()
-            user.hash_password(raw_pw)            
+            user.hash_password((user_data.get("password") or "").strip())            
         if "is_admin" in user_data:
             user.is_admin = bool(user_data.get("is_admin"))
 
@@ -66,6 +64,7 @@ class HBnBFacade:
         return self.user_repo.update(user_id, user_data)
 
     # ---------- Amenities ----------
+
     def create_amenity(self, data: Dict[str, Any]) -> Amenity:
         name = (data.get("name") or "").strip()
         amenity = Amenity(name=name)
@@ -86,29 +85,21 @@ class HBnBFacade:
         amenity = self.amenity_repo.get(amenity_id)
         if not amenity:
             return None
-
         if "name" in data:
             amenity.name = (data.get("name") or "").strip()
-
         amenity.validate()
         db.session.commit()
         return amenity
 
-    # ---------- Places ---------- #
-    def create_place(self, data: Dict[str, Any]) -> Place:
-        title = (data.get("title") or "").strip()
-        description = data.get("description") or ""
-        price = data.get("price")
-        latitude = data.get("latitude")
-        longitude = data.get("longitude")
-        owner_id = data.get("owner_id")
-        amenity_ids = data.get("amenity_ids") or []
+    # ---------- Places ----------
 
-        owner = self.user_repo.get(owner_id)
+    def create_place(self, data: Dict[str, Any]) -> Place:
+        owner = self.user_repo.get(data.get("owner_id"))
         if not owner:
             raise ValueError("Owner not found")
 
-        amenities: List[Amenity] = []
+        amenity_ids = data.get("amenity_ids") or []
+        amenities = []
         for aid in amenity_ids:
             a = self.amenity_repo.get(aid)
             if not a:
@@ -116,28 +107,23 @@ class HBnBFacade:
             amenities.append(a)
 
         place = Place(
-            title=title,
-            description=description,
-            price=price,
-            latitude=latitude,
-            longitude=longitude,
-            # owner=owner,
-            owner_id=owner.id,
-            # amenities=amenities,
+            title=(data.get("title") or "").strip(),
+            description=data.get("description") or "",
+            price=data.get("price"),
+            latitude=data.get("latitude"),
+            longitude=data.get("longitude"),
+            owner_id=owner.id
         )
 
-        # --- أسطر مضافة حديثاً (لإدارة حالة الخصائص الداخلية) ---
-        for a in amenities:
-            place.add_amenity_id(a.id)
-
-        # --- أسطر مضافة حديثاً (للحقن الديناميكي لمراجع الكائنات) ---
+        # Syncing relationships and internal ID trackers
         place.owner = owner
         place.amenities = amenities
-
-        # place.validate()
-        # تم حذف السطر أعلاه (Redundancy Elimination): التهيئة في Place تستدعيها تلقائياً.
+        if hasattr(place, 'add_amenity_id'):
+            for a in amenities:
+                place.add_amenity_id(a.id)
 
         return self.place_repo.add(place)
+
     def get_place(self, place_id: str) -> Optional[Place]:
         return self.place_repo.get(place_id)
 
@@ -149,22 +135,11 @@ class HBnBFacade:
         if not place:
             return None
         
-        data = data or {}
-        
-        if "title" in data:
-            place.title = (data.get("title") or "").strip()
-
-        if "description" in data:
-            place.description = data.get("description") or ""
-
-        if "price" in data:
-            place.price = data.get("price")
-
-        if "latitude" in data:
-            place.latitude = data.get("latitude")
-
-        if "longitude" in data:
-            place.longitude = data.get("longitude")
+        # Updating standard fields
+        for field in ["title", "description", "price", "latitude", "longitude"]:
+            if field in data:
+                val = data.get(field)
+                setattr(place, field, val.strip() if isinstance(val, str) else val)
 
         if "owner_id" in data:
             new_owner = self.user_repo.get(data.get("owner_id"))
@@ -174,107 +149,67 @@ class HBnBFacade:
 
         if "amenity_ids" in data:
             ids = data.get("amenity_ids") or []
-
             new_amenities = []
             for aid in ids:
-             a = self.amenity_repo.get(aid)
-            if not a:
-                raise ValueError(f"Amenity not found: {aid}")
-            new_amenities.append(a)
-
-        place.amenities = new_amenities    
-            # تحديث قائمة المعرفات الداخلية
-        place.amenity_ids = [a.id for a in new_amenities]
-            
-      
-
+                a = self.amenity_repo.get(aid)
+                if not a:
+                    raise ValueError(f"Amenity not found: {aid}")
+                new_amenities.append(a)
+            place.amenities = new_amenities
+            if hasattr(place, 'amenity_ids'):
+                place.amenity_ids = [a.id for a in new_amenities]
 
         place.validate()
         db.session.commit()
-
-        return place        
-        
+        return place
 
     # ---------- Reviews ----------
+
     def create_review(self, data: Dict[str, Any]) -> Review:
-        text = (data.get("text") or "").strip()
-        rating = data.get("rating")
-        user_id = data.get("user_id")
-        place_id = data.get("place_id")
-
-        user = self.user_repo.get(user_id)
-        if not user:
-            raise ValueError("User not found")
-
-        place = self.place_repo.get(place_id)
-        if not place:
-            raise ValueError("Place not found")
+        user = self.user_repo.get(data.get("user_id"))
+        place = self.place_repo.get(data.get("place_id"))
+        if not user: raise ValueError("User not found")
+        if not place: raise ValueError("Place not found")
 
         review = Review(
-            text=text,
-            rating=rating,
+            text=(data.get("text") or "").strip(),
+            rating=data.get("rating"),
             user_id=user.id,
             place_id=place.id,
         )
-
         review.user = user
         review.place = place
-
         review.validate()
+        
         created = self.review_repo.add(review)
 
-        if not hasattr(place, "review_ids") or place.review_ids is None:
-            place.review_ids = []
-        place.review_ids.append(created.id)
-        
+        # Update place's review tracker if using internal list
+        if hasattr(place, "review_ids"):
+            if place.review_ids is None: place.review_ids = []
+            place.review_ids.append(created.id)
 
         return created
-    
-    def get_review(self, review_id: str) -> Optional[Review]:
-        return self.review_repo.get(review_id)
 
-    def list_reviews(self) -> List[Review]:
-        return self.review_repo.get_all()
-
-    def update_review(self, review_id: str, data: Dict[str, Any]) -> Optional[Review]:
-        review = self.review_repo.get(review_id)
-        if not review:
-            return None
-        data = data or {}
-        if "text" in data:
-            review.text = (data.get("text") or "").strip()
-        if "rating" in data:
-            review.rating = data.get("rating")
-
-        review.validate()
-        db.session.commit()
-        return review
-
-    
     def list_reviews_by_place(self, place_id: str) -> List[Review]:
         place = self.place_repo.get(place_id)
         if not place:
             raise ValueError("Place not found")
-
-        if hasattr(place, "reviews") and place.reviews is not None:
+        if hasattr(place, "reviews") and place.reviews:
             return place.reviews
-
-        return [r for r in self.review_repo.get_all() if r.place and r.place.id == place_id]
+        return [r for r in self.review_repo.get_all() if r.place_id == place_id]
 
     def delete_review(self, review_id: str) -> bool:
         review = self.review_repo.get(review_id)
         if not review:
             return False
-
+        
+        # Cleanup internal lists if they exist
         place_id = getattr(review, "place_id", None)
         if place_id:
             place = self.place_repo.get(place_id)
             if place and hasattr(place, "review_ids") and place.review_ids:
-                place.review_ids = [
-                    rid for rid in place.review_ids if rid != review_id
-                ]
-                place.save()
+                place.review_ids = [rid for rid in place.review_ids if rid != review_id]
 
-        self.review_repo.delete(review_id)
-        return True
+        return self.review_repo.delete(review_id)
+
 facade = HBnBFacade()
