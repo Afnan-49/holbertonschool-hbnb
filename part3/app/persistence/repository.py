@@ -1,9 +1,12 @@
+# app/persistence/repository.py
 from abc import ABC, abstractmethod
 from app import db
 
-
 class Repository(ABC):
-
+    """
+    Abstract Base Class for the Repository pattern.
+    Ensures all repository implementations follow the same interface.
+    """
     @abstractmethod
     def add(self, obj):
         pass
@@ -29,80 +32,47 @@ class Repository(ABC):
         pass
 
 
-class InMemoryRepository(Repository):
-    def __init__(self):
-        self._storage = {}
-
-    def add(self, obj):
-        self._storage[obj.id] = obj
-        return obj
-
-    def get(self, obj_id):
-        return self._storage.get(obj_id)
-
-    def get_all(self):
-        return list(self._storage.values())
-
-    def update(self, obj_id, data):
-        obj = self.get(obj_id)
-        if not obj:
-            return None
-        obj.update(data)
-        return obj
-
-    def delete(self, obj_id):
-        return self._storage.pop(obj_id, None) is not None
-
-    def get_by_attribute(self, attr_name, attr_value):
-        return next(
-            (
-                obj for obj in self._storage.values()
-                if getattr(obj, attr_name, None) == attr_value
-            ),
-            None
-        )
 class SQLAlchemyRepository(Repository):
     """
-    SQLAlchemy implementation of the Repository pattern.
-    Works with a given SQLAlchemy model (db.Model).
+    SQLAlchemy-based implementation of the Repository pattern.
+    Used for persistent storage in a relational database.
     """
-
     def __init__(self, model):
         self.model = model
 
     def add(self, obj):
+        """Adds a new object to the database session and commits."""
         db.session.add(obj)
         db.session.commit()
         return obj
 
     def get(self, obj_id):
-        return db.session.get(self.model, obj_id)
+        """Retrieves an object by its primary key ID."""
+        return self.model.query.get(obj_id)
 
     def get_all(self):
+        """Retrieves all records for the specific model."""
         return self.model.query.all()
 
     def update(self, obj_id, data):
+        """Updates attributes of an existing object based on a dictionary."""
         obj = self.get(obj_id)
-        if not obj:
-            return None
-
-        for key, value in (data or {}).items():
-            if hasattr(obj, key):
-                setattr(obj, key, value)
-
-        db.session.commit()
+        if obj:
+            for key, value in data.items():
+                if hasattr(obj, key):
+                    setattr(obj, key, value)
+            db.session.commit()
         return obj
 
     def delete(self, obj_id):
+        """Removes an object from the database."""
         obj = self.get(obj_id)
-        if not obj:
-            return False
-
-        db.session.delete(obj)
-        db.session.commit()
-        return True
+        if obj:
+            db.session.delete(obj)
+            db.session.commit()
+            return True
+        return False
 
     def get_by_attribute(self, attr_name, attr_value):
-        if not hasattr(self.model, attr_name):
-            return None
-        return self.model.query.filter(getattr(self.model, attr_name) == attr_value).first()
+        """Finds the first record where a specific attribute matches a value."""
+        return self.model.query.filter_by(**{attr_name: attr_value}).first()
