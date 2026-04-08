@@ -1,0 +1,70 @@
+:root {
+    --primary-color: #ff385c; /* Example color */
+    --text-color: #333;
+    --bg-color: #f7f7f7;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    color: var(--text-color);
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 50px;
+    border-bottom: 1px solid #ddd;
+}
+
+.logo {
+    height: 40px;
+}
+
+.login-button {
+    padding: 8px 16px;
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+main {
+    flex: 1;
+    padding: 20px;
+}
+
+/* Fixed Parameters for Cards */
+.place-card, .review-card {
+    margin: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+.place-card {
+    display: inline-block;
+    width: 300px;
+    vertical-align: top;
+}
+
+.details-button {
+    display: block;
+    text-align: center;
+    margin-top: 10px;
+    padding: 5px;
+    background: #444;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    border-top: 1px solid #ddd;
+}
