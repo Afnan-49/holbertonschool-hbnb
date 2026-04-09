@@ -1,20 +1,37 @@
-const API_BASE_URL = 'https://your-api-url'; // REPLACE WITH YOUR ACTUAL API URL
+/**
+ * HBnB - Main Application Script
+ * Handles Login, Places List, and Place Details
+ */
+
+const API_BASE_URL = 'https://your-api-url'; // Change this to your actual API address
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Unique markers to identify which page we are on
     const loginForm = document.getElementById('login-form');
-    const placesList = document.getElementById('places-list');
+    const placesListContainer = document.getElementById('places-list');
+    const placeDetailsContainer = document.getElementById('place-details');
 
-    // PAGE DISPATCHER
+    // --- Page Dispatcher ---
     if (loginForm) {
         handleLoginSubmission(loginForm);
     }
 
-    if (placesList) {
+    if (placesListContainer) {
         initIndexPage();
+    }
+
+    if (placeDetailsContainer) {
+        initPlaceDetailsPage();
     }
 });
 
-/* --- SHARED UTILITIES --- */
+/* ==========================================
+   SHARED UTILITIES
+   ========================================== */
+
+/**
+ * Retrieves a cookie value by name.
+ */
 function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
@@ -22,7 +39,10 @@ function getCookie(name) {
     return null;
 }
 
-/* --- TASK 1: LOGIN LOGIC --- */
+/* ==========================================
+   TASK 1: LOGIN PAGE LOGIC
+   ========================================== */
+
 function handleLoginSubmission(form) {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -38,29 +58,35 @@ function handleLoginSubmission(form) {
 
             if (response.ok) {
                 const data = await response.json();
+                // Store JWT token in a cookie valid for the whole site
                 document.cookie = `token=${data.access_token}; path=/; SameSite=Lax`;
                 window.location.href = 'index.html';
             } else {
-                alert('Login Failed. Please check your credentials.');
+                const errorData = await response.json();
+                alert('Login Failed: ' + (errorData.msg || 'Invalid credentials'));
             }
         } catch (err) {
             console.error('Login error:', err);
+            alert('Could not connect to the server.');
         }
     });
 }
 
-/* --- TASK 2: INDEX LOGIC --- */
+/* ==========================================
+   TASK 2: INDEX PAGE (PLACES LIST) LOGIC
+   ========================================== */
+
 function initIndexPage() {
     const token = getCookie('token');
     const loginLink = document.getElementById('login-link');
 
-    // UI Auth Toggle
+    // Toggle Login link visibility based on authentication
     if (token) {
         if (loginLink) loginLink.style.display = 'none';
         fetchPlaces(token);
     } else {
         if (loginLink) loginLink.style.display = 'block';
-        fetchPlaces(); // Fetch anyway if API allows public viewing
+        fetchPlaces(); // Fetch as public if allowed
     }
 
     setupPriceFilter();
@@ -74,16 +100,16 @@ async function fetchPlaces(token = null) {
         const response = await fetch(`${API_BASE_URL}/places`, { headers });
         if (response.ok) {
             const places = await response.json();
-            renderPlaces(places);
+            renderPlacesList(places);
         }
     } catch (err) {
         console.error('Fetch places error:', err);
     }
 }
 
-function renderPlaces(places) {
+function renderPlacesList(places) {
     const container = document.getElementById('places-list');
-    container.innerHTML = '';
+    container.innerHTML = ''; // Clear container
 
     places.forEach(place => {
         const card = document.createElement('article');
@@ -102,6 +128,8 @@ function renderPlaces(places) {
 
 function setupPriceFilter() {
     const filter = document.getElementById('price-filter');
+    if (!filter) return;
+
     filter.addEventListener('change', (e) => {
         const maxPrice = e.target.value;
         const cards = document.querySelectorAll('.place-card');
@@ -115,4 +143,94 @@ function setupPriceFilter() {
             }
         });
     });
+}
+
+/* ==========================================
+   TASK 3: PLACE DETAILS PAGE LOGIC
+   ========================================== */
+
+async function initPlaceDetailsPage() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const placeId = urlParams.get('id');
+    const token = getCookie('token');
+
+    if (!placeId) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    // Toggle the "Add Review" section visibility
+    const addReviewSection = document.getElementById('add-review');
+    if (token && addReviewSection) {
+        addReviewSection.style.display = 'block';
+        const reviewBtn = document.getElementById('add-review-button');
+        if (reviewBtn) reviewBtn.href = `add_review.html?id=${placeId}`;
+    }
+
+    fetchPlaceDetails(placeId, token);
+}
+
+async function fetchPlaceDetails(placeId, token) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/places/${placeId}`, { headers });
+        if (response.ok) {
+            const place = await response.json();
+            renderPlaceDetails(place);
+        } else {
+            const container = document.getElementById('place-details');
+            container.innerHTML = '<h2>Place not found.</h2>';
+        }
+    } catch (err) {
+        console.error('Error fetching details:', err);
+    }
+}
+
+function renderPlaceDetails(place) {
+    // 1. Core Details
+    const detailsContainer = document.getElementById('place-details');
+    detailsContainer.innerHTML = `
+        <h1>${place.name}</h1>
+        <div class="place-info">
+            <p><strong>Price per night:</strong> $${place.price_by_night}</p>
+            <p><strong>Description:</strong> ${place.description}</p>
+            <p><strong>Host:</strong> ${place.host_name || 'Anonymous'}</p>
+        </div>
+    `;
+
+    // 2. Amenities
+    const amenitiesList = document.getElementById('amenities-list');
+    if (amenitiesList) {
+        amenitiesList.innerHTML = '';
+        if (place.amenities && place.amenities.length > 0) {
+            place.amenities.forEach(amenity => {
+                const li = document.createElement('li');
+                li.textContent = amenity.name;
+                amenitiesList.appendChild(li);
+            });
+        } else {
+            amenitiesList.innerHTML = '<li>No amenities available.</li>';
+        }
+    }
+
+    // 3. Reviews
+    const reviewsList = document.getElementById('reviews-list');
+    if (reviewsList) {
+        reviewsList.innerHTML = '';
+        if (place.reviews && place.reviews.length > 0) {
+            place.reviews.forEach(review => {
+                const reviewCard = document.createElement('div');
+                reviewCard.className = 'review-card';
+                reviewCard.innerHTML = `
+                    <p><strong>${review.user_name}</strong> - ${review.rating} Stars</p>
+                    <p>"${review.comment}"</p>
+                `;
+                reviewsList.appendChild(reviewCard);
+            });
+        } else {
+            reviewsList.innerHTML = '<p>No reviews yet.</p>';
+        }
+    }
 }
