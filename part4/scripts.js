@@ -3,7 +3,11 @@
  * Handles Login, Places List, and Place Details
  */
 
-const API_BASE_URL = 'http://localhost:5000'; // API address
+// 1. CONFIGURATION TOGGLE
+// Set isLocal to true for local development (localhost:5000)
+// Set isLocal to false when you eventually deploy to a real server
+const isLocal = true; 
+const API_BASE_URL = isLocal ? 'http://localhost:5000' : 'https://your-deployed-api.com';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Unique markers to identify which page we are on
@@ -31,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /**
  * Retrieves a cookie value by name.
+ * Useful for grabbing the JWT 'token'
  */
 function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -67,7 +72,7 @@ function handleLoginSubmission(form) {
             }
         } catch (err) {
             console.error('Login error:', err);
-            alert('Could not connect to the server.');
+            alert('Could not connect to the server. Is your Python API running?');
         }
     });
 }
@@ -86,7 +91,7 @@ function initIndexPage() {
         fetchPlaces(token);
     } else {
         if (loginLink) loginLink.style.display = 'block';
-        fetchPlaces(); // Fetch as public if allowed
+        fetchPlaces(); // Fetch as public if allowed by your API
     }
 
     setupPriceFilter();
@@ -109,6 +114,7 @@ async function fetchPlaces(token = null) {
 
 function renderPlacesList(places) {
     const container = document.getElementById('places-list');
+    if (!container) return;
     container.innerHTML = ''; // Clear container
 
     places.forEach(place => {
@@ -159,7 +165,7 @@ async function initPlaceDetailsPage() {
         return;
     }
 
-    // Toggle the "Add Review" section visibility
+    // Toggle the "Add Review" section visibility if logged in
     const addReviewSection = document.getElementById('add-review');
     if (token && addReviewSection) {
         addReviewSection.style.display = 'block';
@@ -181,7 +187,7 @@ async function fetchPlaceDetails(placeId, token) {
             renderPlaceDetails(place);
         } else {
             const container = document.getElementById('place-details');
-            container.innerHTML = '<h2>Place not found.</h2>';
+            if (container) container.innerHTML = '<h2>Place not found.</h2>';
         }
     } catch (err) {
         console.error('Error fetching details:', err);
@@ -189,18 +195,20 @@ async function fetchPlaceDetails(placeId, token) {
 }
 
 function renderPlaceDetails(place) {
-    // 1. Core Details
+    // 1. Core Details (Name, Price, Description)
     const detailsContainer = document.getElementById('place-details');
-    detailsContainer.innerHTML = `
-        <h1>${place.name}</h1>
-        <div class="place-info">
-            <p><strong>Price per night:</strong> $${place.price_by_night}</p>
-            <p><strong>Description:</strong> ${place.description}</p>
-            <p><strong>Host:</strong> ${place.host_name || 'Anonymous'}</p>
-        </div>
-    `;
+    if (detailsContainer) {
+        detailsContainer.innerHTML = `
+            <h1>${place.name}</h1>
+            <div class="place-info">
+                <p><strong>Price per night:</strong> $${place.price_by_night}</p>
+                <p><strong>Description:</strong> ${place.description}</p>
+                <p><strong>Host:</strong> ${place.host_name || 'Anonymous'}</p>
+            </div>
+        `;
+    }
 
-    // 2. Amenities
+    // 2. Amenities List
     const amenitiesList = document.getElementById('amenities-list');
     if (amenitiesList) {
         amenitiesList.innerHTML = '';
@@ -215,7 +223,7 @@ function renderPlaceDetails(place) {
         }
     }
 
-    // 3. Reviews
+    // 3. Reviews List
     const reviewsList = document.getElementById('reviews-list');
     if (reviewsList) {
         reviewsList.innerHTML = '';
