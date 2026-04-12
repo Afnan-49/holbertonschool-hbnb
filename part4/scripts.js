@@ -3,7 +3,7 @@
  * Handles Login, Places List, and Place Details
  */
 
-const API_BASE_URL = 'https://your-api-url'; // Change this to your actual API address
+const API_BASE_URL = 'http://localhost:5000'; // API address
 
 document.addEventListener('DOMContentLoaded', () => {
     // Unique markers to identify which page we are on
