@@ -1,16 +1,18 @@
+# app/models/amenity.py
+from __future__ import annotations
+
 from app.models.base_model import BaseModel
+from app.models.validators import require_str
+
 
 class Amenity(BaseModel):
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         super().__init__()
-        self.name = name
+        self.name = require_str("name", name, max_len=50)
 
-    @property
-    def name(self):
-        return self._name
+    def validate(self) -> None:
+        self.name = require_str("name", self.name, max_len=50)
 
-    @name.setter
-    def name(self, value):
-        if not value or len(value) > 50:
-            raise ValueError("Amenity name is required and must be under 50 characters")
-        self._name = value
+    def update(self, data: dict) -> None:
+        super().update(data)
+        self.validate()
