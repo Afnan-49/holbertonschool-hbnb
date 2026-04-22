@@ -11,15 +11,33 @@ from app.models.review import Review
 from app.models.amenity import Amenity
 
 from app import db
+
 class HBnBFacade:
     def __init__(self):
-        self.user_repo = UserRepository()      
+        self.user_repo = UserRepository()
         self.place_repo = SQLAlchemyRepository(Place)
         self.review_repo = SQLAlchemyRepository(Review)
         self.amenity_repo = SQLAlchemyRepository(Amenity)
 
+        # --- SEED DATA: Automatic Admin Creation ---
+        # This ensures you have a login account ready to use.
+        admin_email = "admin@hbnb.com"
+        try:
+            if not self.get_user_by_email(admin_email):
+                self.create_user({
+                    "first_name": "Admin",
+                    "last_name": "User",
+                    "email": admin_email,
+                    "password": "admin_password", # Use this to log in!
+                    "is_admin": True
+                })
+                print(f"[*] Success: Created default admin user ({admin_email})")
+        except Exception as e:
+            print(f"[!] Warning: Could not seed admin user: {e}")
+        # ------------------------------------------
+
     # ---------- Users ----------
-        
+
     def create_user(self, user_data: Dict[str, Any]) -> User:
         user = User(
             first_name=user_data.get("first_name") or "",
@@ -34,7 +52,7 @@ class HBnBFacade:
 
         user.validate()
 
-        existing = self.user_repo.get_user_by_email(user.email)
+        existing = self.user_repo.get_user_by_email(user.email)        
         if existing:
             raise ValueError("Email already exists")
 
@@ -56,32 +74,32 @@ class HBnBFacade:
         if "last_name" in user_data:
             user.last_name = (user_data.get("last_name") or "").strip()
         if "email" in user_data:
-            user.email = (user_data.get("email") or "").strip()
+            user.email = (user_data.get("email") or "").strip()        
         if "password" in user_data:
-            raw_pw = (user_data.get("password") or "").strip()
-            user.hash_password(raw_pw)            
+            raw_pw = (user_data.get("password") or "").strip()        
+            user.hash_password(raw_pw)
         if "is_admin" in user_data:
             user.is_admin = bool(user_data.get("is_admin"))
 
         user.validate()
         db.session.commit()
         return user
-    
+
     def get_user_by_email(self, email: str):
-        return self.user_repo.get_user_by_email(email)    
-    
+        return self.user_repo.get_user_by_email(email)
+
     # ---------- Amenities ----------
-    def create_amenity(self, data: Dict[str, Any]) -> Amenity:
+    def create_amenity(self, data: Dict[str, Any]) -> Amenity:        
         name = (data.get("name") or "").strip()
         amenity = Amenity(name=name)
         amenity.validate()
 
-        if self.amenity_repo.get_by_attribute("name", amenity.name):
+        if self.amenity_repo.get_by_attribute("name", amenity.name):  
             raise ValueError("Amenity name already exists")
 
         return self.amenity_repo.add(amenity)
 
-    def get_amenity(self, amenity_id: str) -> Optional[Amenity]:
+    def get_amenity(self, amenity_id: str) -> Optional[Amenity]:      
         return self.amenity_repo.get(amenity_id)
 
     def list_amenities(self) -> List[Amenity]:
@@ -126,23 +144,17 @@ class HBnBFacade:
             price=price,
             latitude=latitude,
             longitude=longitude,
-            # owner=owner,
             owner_id=owner.id,
-            # amenities=amenities,
         )
 
-        # --- أسطر مضافة حديثاً (لإدارة حالة الخصائص الداخلية) ---
         for a in amenities:
             place.add_amenity_id(a.id)
 
-        # --- أسطر مضافة حديثاً (للحقن الديناميكي لمراجع الكائنات) ---
         place.owner = owner
         place.amenities = amenities
 
-        # place.validate()
-        # تم حذف السطر أعلاه (Redundancy Elimination): التهيئة في Place تستدعيها تلقائياً.
-
         return self.place_repo.add(place)
+
     def get_place(self, place_id: str) -> Optional[Place]:
         return self.place_repo.get(place_id)
 
@@ -153,9 +165,9 @@ class HBnBFacade:
         place = self.place_repo.get(place_id)
         if not place:
             return None
-        
+
         data = data or {}
-        
+
         if "title" in data:
             place.title = (data.get("title") or "").strip()
 
@@ -172,33 +184,25 @@ class HBnBFacade:
             place.longitude = data.get("longitude")
 
         if "owner_id" in data:
-            new_owner = self.user_repo.get(data.get("owner_id"))
+            new_owner = self.user_repo.get(data.get("owner_id"))      
             if not new_owner:
                 raise ValueError("Owner not found")
             place.owner_id = new_owner.id
 
         if "amenity_ids" in data:
             ids = data.get("amenity_ids") or []
-
             new_amenities = []
             for aid in ids:
-             a = self.amenity_repo.get(aid)
-            if not a:
-                raise ValueError(f"Amenity not found: {aid}")
-            new_amenities.append(a)
-
-            place.amenities = new_amenities    
-            # تحديث قائمة المعرفات الداخلية
+                a = self.amenity_repo.get(aid)
+                if not a:
+                    raise ValueError(f"Amenity not found: {aid}")
+                new_amenities.append(a)
+            place.amenities = new_amenities
             place.amenity_ids = [a.id for a in new_amenities]
-            
-      
-
 
         place.validate()
         db.session.commit()
-
-        return place        
-        
+        return place
 
     # ---------- Reviews ----------
     def create_review(self, data: Dict[str, Any]) -> Review:
@@ -231,10 +235,9 @@ class HBnBFacade:
         if not hasattr(place, "review_ids") or place.review_ids is None:
             place.review_ids = []
         place.review_ids.append(created.id)
-        
 
         return created
-    
+
     def get_review(self, review_id: str) -> Optional[Review]:
         return self.review_repo.get(review_id)
 
@@ -248,38 +251,28 @@ class HBnBFacade:
         data = data or {}
         if "text" in data:
             review.text = (data.get("text") or "").strip()
-        if "rating" in data:
-            review.rating = data.get("rating")
-
         review.validate()
         db.session.commit()
         return review
 
-    
     def list_reviews_by_place(self, place_id: str) -> List[Review]:
         place = self.place_repo.get(place_id)
         if not place:
             raise ValueError("Place not found")
-
         if hasattr(place, "reviews") and place.reviews is not None:
             return place.reviews
-
         return [r for r in self.review_repo.get_all() if r.place and r.place.id == place_id]
 
     def delete_review(self, review_id: str) -> bool:
         review = self.review_repo.get(review_id)
         if not review:
             return False
-
         place_id = getattr(review, "place_id", None)
         if place_id:
             place = self.place_repo.get(place_id)
             if place and hasattr(place, "review_ids") and place.review_ids:
-                place.review_ids = [
-                    rid for rid in place.review_ids if rid != review_id
-                ]
-                place.save()
-
+                place.review_ids = [rid for rid in place.review_ids if rid != review_id]
         self.review_repo.delete(review_id)
         return True
+
 facade = HBnBFacade()
