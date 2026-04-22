@@ -3,8 +3,7 @@ from flask_restx import Api
 from flask_sqlalchemy import SQLAlchemy 
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
-
-
+from flask_cors import CORS # Added this import
 
 db = SQLAlchemy()
 bcrypt = Bcrypt()
@@ -12,6 +11,9 @@ jwt = JWTManager()
 
 def create_app(config_class="config.DevelopmentConfig"):
     app = Flask(__name__)
+    
+    # Enable CORS so your front-end (Port 8000) can talk to this API (Port 5000)
+    CORS(app) 
     
     app.config.from_object(config_class)
     db.init_app(app) 
