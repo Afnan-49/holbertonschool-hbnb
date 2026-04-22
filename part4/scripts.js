@@ -4,13 +4,10 @@
  */
 
 // 1. CONFIGURATION TOGGLE
-// Set isLocal to true for local development (localhost:5000)
-// Set isLocal to false when you eventually deploy to a real server
 const isLocal = true; 
 const API_BASE_URL = isLocal ? 'http://localhost:5000' : 'https://your-deployed-api.com';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Unique markers to identify which page we are on
     const loginForm = document.getElementById('login-form');
     const placesListContainer = document.getElementById('places-list');
     const placeDetailsContainer = document.getElementById('place-details');
@@ -21,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (placesListContainer) {
-        initIndexPage();
+        initPlacesPage(); // Renamed for clarity since we use place.html
     }
 
     if (placeDetailsContainer) {
@@ -33,10 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
    SHARED UTILITIES
    ========================================== */
 
-/**
- * Retrieves a cookie value by name.
- * Useful for grabbing the JWT 'token'
- */
 function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
@@ -63,9 +56,11 @@ function handleLoginSubmission(form) {
 
             if (response.ok) {
                 const data = await response.json();
-                // Store JWT token in a cookie valid for the whole site
+                // Store JWT token in a cookie
                 document.cookie = `token=${data.access_token}; path=/; SameSite=Lax`;
-                window.location.href = 'index.html';
+                
+                // REDIRECT UPDATE: Changed from index.html to place.html
+                window.location.href = 'place.html';
             } else {
                 const errorData = await response.json();
                 alert('Login Failed: ' + (errorData.msg || 'Invalid credentials'));
@@ -78,20 +73,19 @@ function handleLoginSubmission(form) {
 }
 
 /* ==========================================
-   TASK 2: INDEX PAGE (PLACES LIST) LOGIC
+   TASK 2: PLACES PAGE (LIST) LOGIC
    ========================================== */
 
-function initIndexPage() {
+function initPlacesPage() {
     const token = getCookie('token');
     const loginLink = document.getElementById('login-link');
 
-    // Toggle Login link visibility based on authentication
     if (token) {
         if (loginLink) loginLink.style.display = 'none';
         fetchPlaces(token);
     } else {
         if (loginLink) loginLink.style.display = 'block';
-        fetchPlaces(); // Fetch as public if allowed by your API
+        fetchPlaces(); 
     }
 
     setupPriceFilter();
@@ -115,7 +109,7 @@ async function fetchPlaces(token = null) {
 function renderPlacesList(places) {
     const container = document.getElementById('places-list');
     if (!container) return;
-    container.innerHTML = ''; // Clear container
+    container.innerHTML = ''; 
 
     places.forEach(place => {
         const card = document.createElement('article');
@@ -161,11 +155,11 @@ async function initPlaceDetailsPage() {
     const token = getCookie('token');
 
     if (!placeId) {
-        window.location.href = 'index.html';
+        // REDIRECT UPDATE: Changed from index.html to place.html
+        window.location.href = 'place.html';
         return;
     }
 
-    // Toggle the "Add Review" section visibility if logged in
     const addReviewSection = document.getElementById('add-review');
     if (token && addReviewSection) {
         addReviewSection.style.display = 'block';
@@ -195,7 +189,6 @@ async function fetchPlaceDetails(placeId, token) {
 }
 
 function renderPlaceDetails(place) {
-    // 1. Core Details (Name, Price, Description)
     const detailsContainer = document.getElementById('place-details');
     if (detailsContainer) {
         detailsContainer.innerHTML = `
@@ -208,7 +201,6 @@ function renderPlaceDetails(place) {
         `;
     }
 
-    // 2. Amenities List
     const amenitiesList = document.getElementById('amenities-list');
     if (amenitiesList) {
         amenitiesList.innerHTML = '';
@@ -223,7 +215,6 @@ function renderPlaceDetails(place) {
         }
     }
 
-    // 3. Reviews List
     const reviewsList = document.getElementById('reviews-list');
     if (reviewsList) {
         reviewsList.innerHTML = '';
